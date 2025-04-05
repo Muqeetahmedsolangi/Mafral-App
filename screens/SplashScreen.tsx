@@ -1,38 +1,28 @@
 // screens/SplashScreen.tsx
-import React, { useEffect } from 'react';
-import { View, StyleSheet, Image, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useTheme } from '@/context/ThemeContext';
+import React from "react";
+import { View, StyleSheet, Image, ActivityIndicator } from "react-native";
+import { useTheme } from "@/context/ThemeContext";
 
-export const  SplashScreen = () => {
-  const router = useRouter();
+export const SplashScreen = () => {
   const { colors } = useTheme();
 
-  useEffect(() => {
-    // Simulate loading delay and navigate to auth screen
-    const timer = setTimeout(() => {
-      router.replace('/auth/signin');
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [router]);
+  // The routing logic is now handled in AuthContext
+  // This component just displays the splash screen
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.logoContainer}>
-        {/* App Logo */}
         <Image
-          source={require('@/assets/images/logo.png')}
+          source={require("@/assets/images/logo.png")}
           style={styles.logo}
           resizeMode="contain"
         />
       </View>
 
-      {/* Loading indicator */}
-      <ActivityIndicator 
-        color={colors.primary} 
-        size="small" 
-        style={styles.loader} 
+      <ActivityIndicator
+        color={colors.primary}
+        size="small"
+        style={styles.loader}
       />
     </View>
   );
@@ -41,12 +31,12 @@ export const  SplashScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   logoContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   logo: {
     width: 120,

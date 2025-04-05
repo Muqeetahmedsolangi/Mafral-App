@@ -61,6 +61,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     // Only handle routing after the initial load is complete
     if (isInitialized) {
+      // Check if it's the first app launch
+      checkInitialLaunch();
+    }
+  }, [user, isInitialized]);
+
+  // Check if this is the first time launching the app
+  const checkInitialLaunch = async () => {
+    try {
+      const hasLaunched = await AsyncStorage.getItem("@app_has_launched");
+
+      if (!hasLaunched) {
+        // First time user, show onboarding
+        console.log("First launch, redirecting to onboarding");
+        router.replace("/onboarding/welcome");
+        return;
+      }
+
       if (!user) {
         // No user, go to sign-in
         console.log("No user authenticated, redirecting to sign-in");
@@ -70,12 +87,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         console.log("User needs verification, redirecting");
         router.replace("/auth/verification");
       } else if (user && user.isVerified) {
-        // User is fully authenticated
-        console.log("User authenticated, redirecting to main app");
-        router.replace("/(tabs)");
+        // User is verified, check if they've completed onboarding
+        const hasCompletedOnboarding = await AsyncStorage.getItem(
+          "@has_completed_onboarding"
+        );
+
+        if (hasCompletedOnboarding === "true") {
+          // User has completed onboarding, go to main app
+          console.log(
+            "User authenticated and completed onboarding, redirecting to main app"
+          );
+          router.replace("/(tabs)");
+        } else {
+          // User needs to complete onboarding
+          console.log("User authenticated but needs to complete onboarding");
+          router.replace("/onboarding/interests");
+        }
       }
+    } catch (error) {
+      console.error("Error checking initial launch:", error);
+      // Default to sign-in on error
+      router.replace("/auth/signin");
     }
-  }, [user, isInitialized]);
+  };
 
   // Save user data to storage
   const saveUser = async (userData: User | null) => {
@@ -180,6 +214,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         const verifiedUser = { ...user, isVerified: true };
         await saveUser(verifiedUser);
         setUser(verifiedUser);
+
+        // Check if user has completed onboarding
+        const hasCompletedOnboarding = await AsyncStorage.getItem(
+          "@has_completed_onboarding"
+        );
+        if (hasCompletedOnboarding !== "true") {
+          // If user hasn't completed onboarding, send them there
+          router.replace("/onboarding/interests");
+        }
       } else {
         throw new Error("Invalid verification code");
       }
