@@ -1,143 +1,83 @@
 // app/(tabs)/_layout.tsx
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialIcons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import React from "react";
+import { Tabs } from "expo-router";
+import { Feather } from "@expo/vector-icons";
+import { useTheme } from "@/context/ThemeContext";
 
-import { useTheme } from '@/context/ThemeContext';
-
-export default function TabLayout() {
+export default function TabsLayout() {
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
-  
-  // Instagram-style shadow
-  const shadowStyle = Platform.select({
-    ios: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: -3 },
-      shadowOpacity: 0.1,
-      shadowRadius: 3,
-    },
-    android: {
-      elevation: 8,
-    },
-  });
 
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.tabBarActive,
+        tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.tabBarInactive,
         tabBarStyle: {
           backgroundColor: colors.tabBar,
           borderTopColor: colors.tabBarBorder,
-          borderTopWidth: 0.5,
-          height: 50 + (insets.bottom || 0),
-          paddingBottom: insets.bottom || 0,
-          ...shadowStyle,
+          elevation: 0,
+          shadowOpacity: 0,
         },
-        tabBarShowLabel: false, // Hide labels for Instagram-like appearance
+        headerStyle: {
+          backgroundColor: colors.background,
+        },
+        headerTintColor: colors.text,
+        headerShadowVisible: false,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={styles.tabIconContainer}>
-              {focused && <View style={[styles.indicator, { backgroundColor: colors.tabBarActiveIndicator }]} />}
-              <MaterialIcons 
-                name="home" 
-                size={28} 
-                color={color} 
-              />
-            </View>
+          title: "Home",
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="home" size={size} color={color} />
           ),
         }}
       />
+
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={styles.tabIconContainer}>
-              {focused && <View style={[styles.indicator, { backgroundColor: colors.tabBarActiveIndicator }]} />}
-              <Feather 
-                name="search" 
-                size={28} 
-                color={color} 
-              />
-            </View>
+          title: "Explore",
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="search" size={size} color={color} />
           ),
         }}
       />
+
       <Tabs.Screen
         name="create"
         options={{
-          title: 'Create',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={styles.tabIconContainer}>
-              {focused && <View style={[styles.indicator, { backgroundColor: colors.tabBarActiveIndicator }]} />}
-              <Feather 
-                name="plus-square" 
-                size={26} 
-                color={color} 
-              />
-            </View>
+          title: "Create",
+          headerTitle: "Create Post",
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="plus-square" size={size} color={color} />
           ),
         }}
       />
+
       <Tabs.Screen
         name="reels"
         options={{
-          title: 'Reels',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={styles.tabIconContainer}>
-              {focused && <View style={[styles.indicator, { backgroundColor: colors.tabBarActiveIndicator }]} />}
-              <MaterialCommunityIcons 
-                name="play-box-outline" 
-                size={28} 
-                color={color} 
-              />
-            </View>
+          title: "Reels",
+          headerShown: false, // Hide the header for Reels tab
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="film" size={size} color={color} />
           ),
         }}
       />
+
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={styles.tabIconContainer}>
-              {focused && <View style={[styles.indicator, { backgroundColor: colors.tabBarActiveIndicator }]} />}
-              <MaterialIcons 
-                name="person" 
-                size={28} 
-                color={color} 
-              />
-            </View>
+          title: "Profile",
+          headerTitle: "My Profile",
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="user" size={size} color={color} />
           ),
         }}
       />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  tabIconContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    height: '100%',
-    position: 'relative',
-  },
-  indicator: {
-    position: 'absolute',
-    top: 0,
-    height: 2,
-    width: 20,
-    borderRadius: 1,
-  },
-});

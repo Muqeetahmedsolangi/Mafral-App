@@ -1,114 +1,116 @@
 // components/ui/OTPInput.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   TextInput,
   StyleSheet,
   Keyboard,
-  TouchableWithoutFeedback,
-  ViewStyle
-} from 'react-native';
-import { useTheme } from '@/context/ThemeContext';
+  ViewStyle,
+  NativeSyntheticEvent,
+  TextInputKeyPressEventData,
+} from "react-native";
+import { useTheme } from "@/context/ThemeContext";
 
 interface OTPInputProps {
   codeLength?: number;
   onCodeFilled?: (code: string) => void;
   style?: ViewStyle;
+  secureTextEntry?: boolean;
 }
 
-export const OTPInput = ({ 
-  codeLength = 4, 
+export const OTPInput: React.FC<OTPInputProps> = ({
+  codeLength = 4,
   onCodeFilled,
-  style
-}: OTPInputProps) => {
+  style,
+  secureTextEntry = false,
+}) => {
   const { colors } = useTheme();
-  const [code, setCode] = useState<string[]>(Array(codeLength).fill(''));
+  const [code, setCode] = useState<string[]>(Array(codeLength).fill(""));
   const inputRefs = useRef<Array<TextInput | null>>([]);
 
-  // Initialize input refs array
   useEffect(() => {
-    inputRefs.current = inputRefs.current.slice(0, codeLength);
+    // Pre-create refs array
+    inputRefs.current = Array(codeLength).fill(null);
   }, [codeLength]);
 
-  // Handle text change in each input
-  const handleChangeText = (text: string, index: number) => {
-    // Make sure only a single digit is entered
-    if (text.length > 1) {
-      text = text[text.length - 1];
-    }
-
-    // Update the code array
+  const handleChange = (text: string, index: number) => {
     const newCode = [...code];
-    newCode[index] = text;
+
+    // Only accept single digits
+    newCode[index] = text.slice(-1);
     setCode(newCode);
 
-    // If text is entered and not the last input, focus next input
+    // If input is filled, move to next
     if (text && index < codeLength - 1) {
       inputRefs.current[index + 1]?.focus();
     }
 
-    // If all inputs are filled, call onCodeFilled
-    if (newCode.every(digit => digit) && newCode.length === codeLength) {
+    // Check if the entire code is filled
+    const filledCode = newCode.join("");
+    if (filledCode.length === codeLength && onCodeFilled) {
+      onCodeFilled(filledCode);
       Keyboard.dismiss();
-      onCodeFilled?.(newCode.join(''));
     }
   };
 
-  // Handle backspace key press
-  const handleKeyPress = (e: any, index: number) => {
-    if (e.nativeEvent.key === 'Backspace' && !code[index] && index > 0) {
-      // If current input is empty and backspace is pressed, focus previous input
+  const handleKeyPress = (
+    event: NativeSyntheticEvent<TextInputKeyPressEventData>,
+    index: number
+  ) => {
+    const key = event.nativeEvent.key;
+
+    // Handle backspace
+    if (key === "Backspace" && !code[index] && index > 0) {
+      // Move focus to previous input and clear it
+      const newCode = [...code];
+      newCode[index - 1] = "";
+      setCode(newCode);
       inputRefs.current[index - 1]?.focus();
     }
   };
 
   return (
-    <TouchableWithoutFeedback>
-      <View style={[styles.container, style]}>
-        {Array(codeLength)
-          .fill(0)
-          .map((_, index) => (
-            <TextInput
-              key={`otp-input-${index}`}
-              ref={ref => (inputRefs.current[index] = ref)}
-              style={[
-                styles.input,
-                {
-                  borderColor: code[index] ? colors.primary : colors.border,
-                  backgroundColor: colors.surfaceVariant,
-                  color: colors.text,
-                }
-              ]}
-              value={code[index]}
-              onChangeText={text => handleChangeText(text, index)}
-              onKeyPress={e => handleKeyPress(e, index)}
-              keyboardType="numeric"
-              maxLength={1}
-              textAlign="center"
-              selectionColor={colors.primary}
-              returnKeyType="next"
-              selectTextOnFocus
-            />
-          ))}
-      </View>
-    </TouchableWithoutFeedback>
+    <View style={[styles.container, style]}>
+      {Array(codeLength)
+        .fill(0)
+        .map((_, index) => (
+          <TextInput
+            key={index}
+            style={[
+              styles.input,
+              {
+                borderColor: code[index] ? colors.primary : colors.border,
+                color: colors.text,
+              },
+            ]}
+            ref={(ref) => (inputRefs.current[index] = ref)}
+            value={code[index]}
+            onChangeText={(text) => handleChange(text, index)}
+            onKeyPress={(event) => handleKeyPress(event, index)}
+            keyboardType="number-pad"
+            maxLength={1}
+            secureTextEntry={secureTextEntry}
+            selectTextOnFocus
+            accessibilityLabel={`OTP digit ${index + 1}`}
+          />
+        ))}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    marginVertical: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
   },
   input: {
-    width: 50,
     height: 60,
-    borderWidth: 1,
+    width: 60,
+    borderWidth: 2,
     borderRadius: 8,
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "700",
+    textAlign: "center",
   },
 });

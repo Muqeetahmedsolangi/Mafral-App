@@ -1,31 +1,40 @@
 // screens/VerificationScreen.tsx
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  KeyboardAvoidingView, 
-  Platform 
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
-import { useTheme } from '@/context/ThemeContext';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
+import { router } from "expo-router";
+import { Feather } from "@expo/vector-icons";
 
-import { OTPInput } from '@/components/ui/OTPInput';
-import { Button } from '@/components/ui/Button';
+import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
+import { OTPInput } from "@/components/ui/OTPInput";
+import { Button } from "@/components/ui/Button";
 
 export const VerificationScreen = () => {
-  const router = useRouter();
   const { colors } = useTheme();
-  const [loading, setLoading] = useState(false);
+  const { verifyOTP, user, isLoading, error } = useAuth();
   const [timer, setTimer] = useState(59);
   const [isResendActive, setIsResendActive] = useState(false);
+  const [code, setCode] = useState("");
+
+  // Watch for authentication state changes
+  useEffect(() => {
+    if (user && user.isVerified) {
+      console.log("User verified, redirecting to main app...");
+      router.replace("/(tabs)");
+    }
+  }, [user]);
 
   // Start the countdown timer
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    
+
     if (timer > 0) {
       interval = setInterval(() => {
         setTimer((prevTimer) => prevTimer - 1);
@@ -33,18 +42,13 @@ export const VerificationScreen = () => {
     } else {
       setIsResendActive(true);
     }
-    
+
     return () => clearInterval(interval);
   }, [timer]);
 
-  const handleVerification = (code: string) => {
-    setLoading(true);
-    // Simulate API call for verification
-    setTimeout(() => {
-      setLoading(false);
-      // Navigate to home on successful verification
-      router.replace('/(tabs)');
-    }, 1500);
+  const handleVerification = async (code: string) => {
+    setCode(code);
+    await verifyOTP(code);
   };
 
   const handleResendCode = () => {
@@ -58,17 +62,17 @@ export const VerificationScreen = () => {
 
   // Format seconds to MM:SS
   const formatTime = (seconds: number) => {
-    return `${seconds < 10 ? '0' : ''}${seconds}`;
+    return `${seconds < 10 ? "0" : ""}${seconds}`;
   };
 
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Back button */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
@@ -80,9 +84,16 @@ export const VerificationScreen = () => {
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           We've sent you the verification code on
         </Text>
-        <Text style={[styles.phoneNumber, { color: colors.text }]}>
-          +1 6358 9248 5789
+        <Text style={[styles.email, { color: colors.text }]}>
+          {user?.email || "your email"}
         </Text>
+
+        {/* Error message if any */}
+        {error && (
+          <Text style={[styles.errorText, { color: colors.error }]}>
+            {error}
+          </Text>
+        )}
 
         {/* OTP Input */}
         <OTPInput
@@ -94,24 +105,31 @@ export const VerificationScreen = () => {
         {/* Resend code timer */}
         <View style={styles.resendContainer}>
           <Text style={[styles.resendText, { color: colors.textSecondary }]}>
-            Re-send code in{' '}
+            Re-send code in{" "}
           </Text>
-          <Text 
-            style={[
-              styles.timerText, 
-              { color: isResendActive ? colors.primary : colors.error }
-            ]}
-          >
-            {isResendActive ? 'now' : formatTime(timer)}
-          </Text>
+          {isResendActive ? (
+            <TouchableOpacity onPress={handleResendCode}>
+              <Text style={[styles.timerText, { color: colors.primary }]}>
+                Resend
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={[styles.timerText, { color: colors.text }]}>
+              00:{formatTime(timer)}
+            </Text>
+          )}
         </View>
 
-        {/* Continue button */}
         <Button
-          title="CONTINUE"
-          onPress={() => {}}
-          loading={loading}
-          style={styles.continueButton}
+          title="VERIFY"
+          onPress={() => {
+            if (code.length === 4) {
+              verifyOTP(code);
+            }
+          }}
+          loading={isLoading}
+          style={styles.verifyButton}
+          disabled={isLoading}
         />
       </View>
     </KeyboardAvoidingView>
@@ -129,37 +147,42 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: "700",
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
     marginBottom: 8,
   },
-  phoneNumber: {
+  email: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 32,
   },
   otpContainer: {
-    marginTop: 16,
+    marginVertical: 24,
   },
   resendContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 16,
-    marginBottom: 40,
+    marginBottom: 32,
   },
   resendText: {
     fontSize: 14,
   },
   timerText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
-  continueButton: {
-    marginTop: 16,
+  verifyButton: {
+    marginTop: 8,
+  },
+  errorText: {
+    fontSize: 14,
+    marginVertical: 16,
+    textAlign: "center",
   },
 });

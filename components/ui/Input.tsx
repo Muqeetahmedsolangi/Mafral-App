@@ -1,85 +1,98 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  TextInput, 
-  StyleSheet, 
-  TextInputProps, 
+import React, { useState } from "react";
+import {
+  View,
+  TextInput,
+  Text,
+  StyleSheet,
   TouchableOpacity,
+  TextInputProps,
   ViewStyle,
-  TextStyle
-} from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { useTheme } from '@/context/ThemeContext';
+} from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { useTheme } from "@/context/ThemeContext";
 
 // Type for Feather icon names to ensure type safety
-type FeatherIconName = React.ComponentProps<typeof Feather>['name'];
+type FeatherIconName = React.ComponentProps<typeof Feather>["name"];
 
 interface InputProps extends TextInputProps {
-  // Constrain icon to only valid Feather icon names
-  icon?: FeatherIconName;
-  secureTextEntry?: boolean;
+  label?: string;
+  leftIcon?: FeatherIconName;
+  rightIcon?: FeatherIconName;
+  error?: string;
+  onRightIconPress?: () => void;
   containerStyle?: ViewStyle;
-  inputStyle?: TextStyle;
-  iconColor?: string;
+  style?: ViewStyle;
 }
 
-export const Input = ({ 
-  icon, 
-  secureTextEntry = false, 
-  containerStyle, 
-  inputStyle,
-  iconColor,
-  ...props 
+export const Input = ({
+  label,
+  leftIcon,
+  rightIcon,
+  error,
+  onRightIconPress,
+  containerStyle,
+  style,
+  ...rest
 }: InputProps) => {
   const { colors } = useTheme();
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
-  const togglePasswordVisibility = () => {
-    setIsPasswordVisible(!isPasswordVisible);
+  const getBorderColor = () => {
+    if (error) return colors.error;
+    return isFocused ? colors.primary : colors.border;
   };
 
   return (
-    <View 
-      style={[
-        styles.container, 
-        { 
-          backgroundColor: colors.surfaceVariant,
-          borderColor: colors.border,
-        },
-        containerStyle
-      ]}
-    >
-      {icon && (
-        <Feather 
-          name={icon} 
-          size={20} 
-          color={iconColor || colors.textSecondary} 
-          style={styles.icon} 
-        />
+    <View style={[styles.container, containerStyle]}>
+      {label && (
+        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
       )}
-      
-      <TextInput
-        secureTextEntry={secureTextEntry && !isPasswordVisible}
+
+      <View
         style={[
-          styles.input, 
-          { 
-            color: colors.text,
-            flex: 1,
+          styles.inputContainer,
+          {
+            borderColor: getBorderColor(),
+            backgroundColor: colors.surface,
           },
-          inputStyle
+          style,
         ]}
-        placeholderTextColor={colors.textMuted}
-        {...props}
-      />
-      
-      {secureTextEntry && (
-        <TouchableOpacity onPress={togglePasswordVisibility} style={styles.visibilityToggle}>
+      >
+        {leftIcon && (
           <Feather
-            name={isPasswordVisible ? 'eye-off' : 'eye'}
-            size={20}
-            color={colors.textSecondary}
+            name={leftIcon}
+            size={18}
+            color={isFocused ? colors.primary : colors.icon}
+            style={styles.leftIcon}
           />
-        </TouchableOpacity>
+        )}
+
+        <TextInput
+          style={[
+            styles.input,
+            { color: colors.text },
+            leftIcon && styles.inputWithLeftIcon,
+            rightIcon && styles.inputWithRightIcon,
+          ]}
+          placeholderTextColor={colors.textMuted}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          {...rest}
+        />
+
+        {rightIcon && (
+          <TouchableOpacity
+            onPress={onRightIconPress}
+            style={styles.rightIcon}
+            disabled={!onRightIconPress}
+          >
+            <Feather name={rightIcon} size={18} color={colors.icon} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {error && (
+        <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
       )}
     </View>
   );
@@ -87,22 +100,42 @@ export const Input = ({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    marginBottom: 8,
+    fontWeight: "500",
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
     borderRadius: 8,
-    padding: 12,
-    marginVertical: 8,
-  },
-  icon: {
-    marginRight: 10,
+    height: 48,
   },
   input: {
+    flex: 1,
+    height: "100%",
+    paddingHorizontal: 16,
     fontSize: 16,
-    padding: 0, // Remove default padding on Android
   },
-  visibilityToggle: {
-    padding: 4,
+  inputWithLeftIcon: {
+    paddingLeft: 8,
+  },
+  inputWithRightIcon: {
+    paddingRight: 40,
+  },
+  leftIcon: {
+    marginLeft: 16,
+  },
+  rightIcon: {
+    position: "absolute",
+    right: 16,
+  },
+  errorText: {
+    fontSize: 12,
+    marginTop: 4,
   },
 });
 

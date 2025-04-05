@@ -1,180 +1,167 @@
-import React, { ReactNode } from 'react';
-import { 
-  TouchableOpacity, 
-  Text, 
-  StyleSheet, 
+import React from "react";
+import {
+  TouchableOpacity,
+  Text,
+  StyleSheet,
   ActivityIndicator,
   ViewStyle,
   TextStyle,
-  View
-} from 'react-native';
-import { useTheme } from '@/context/ThemeContext';
+  TouchableOpacityProps,
+} from "react-native";
+import { useTheme } from "@/context/ThemeContext";
 
-interface ButtonProps {
+interface ButtonProps extends TouchableOpacityProps {
   title: string;
-  onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline';
-  size?: 'small' | 'medium' | 'large';
+  variant?: "primary" | "secondary" | "outline" | "ghost";
+  size?: "small" | "medium" | "large";
+  icon?: React.ReactNode;
+  iconPosition?: "left" | "right";
   loading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
-  icon?: ReactNode;
-  iconPosition?: 'left' | 'right';
 }
 
-export const Button = ({
+export function Button({
   title,
-  onPress,
-  variant = 'primary',
-  size = 'medium',
+  variant = "primary",
+  size = "medium",
+  icon,
+  iconPosition = "left",
   loading = false,
   disabled = false,
   style,
   textStyle,
-  icon,
-  iconPosition = 'left',
-}: ButtonProps) => {
+  onPress,
+  ...rest
+}: ButtonProps) {
   const { colors } = useTheme();
 
-  // Function to get button background color based on variant and state
-  const getBackgroundColor = () => {
-    if (disabled) {
-      return variant === 'primary' 
-        ? 'rgba(255, 120, 0, 0.5)' 
-        : variant === 'secondary' 
-          ? colors.surfaceVariant 
-          : 'transparent';
-    }
-    
+  // Button styles based on variant
+  const getButtonStyle = () => {
     switch (variant) {
-      case 'primary':
-        return colors.primary;
-      case 'secondary':
-        return colors.surfaceVariant;
-      case 'outline':
-        return 'transparent';
+      case "primary":
+        return {
+          backgroundColor: disabled ? colors.textMuted : colors.primary,
+          borderWidth: 0,
+        };
+      case "secondary":
+        return {
+          backgroundColor: disabled ? colors.textMuted : colors.surfaceVariant,
+          borderWidth: 0,
+        };
+      case "outline":
+        return {
+          backgroundColor: "transparent",
+          borderWidth: 1,
+          borderColor: disabled ? colors.textMuted : colors.primary,
+        };
+      case "ghost":
+        return {
+          backgroundColor: "transparent",
+          borderWidth: 0,
+        };
       default:
-        return colors.primary;
+        return {
+          backgroundColor: disabled ? colors.textMuted : colors.primary,
+          borderWidth: 0,
+        };
     }
   };
 
-  // Function to get button border color
-  const getBorderColor = () => {
-    return variant === 'outline' ? colors.border : 'transparent';
-  };
-
-  // Function to get text color based on variant and state
+  // Text color based on variant
   const getTextColor = () => {
-    if (disabled) {
-      return variant === 'primary' ? '#FFFFFF' : colors.textSecondary;
-    }
-    
     switch (variant) {
-      case 'primary':
-        return '#FFFFFF';
-      case 'secondary':
-      case 'outline':
+      case "primary":
+        return "#FFFFFF";
+      case "secondary":
         return colors.text;
+      case "outline":
+        return disabled ? colors.textMuted : colors.primary;
+      case "ghost":
+        return disabled ? colors.textMuted : colors.primary;
       default:
-        return '#FFFFFF';
+        return "#FFFFFF";
     }
   };
 
-  // Function to get size-based styles
-  const getSizeStyles = () => {
+  // Button height based on size
+  const getButtonHeight = () => {
     switch (size) {
-      case 'small':
-        return {
-          paddingVertical: 8,
-          paddingHorizontal: 12,
-          buttonTextStyle: { fontSize: 14 }
-        };
-      case 'large':
-        return {
-          paddingVertical: 20,
-          paddingHorizontal: 32,
-          buttonTextStyle: { fontSize: 18 }
-        };
-      case 'medium':
+      case "small":
+        return 36;
+      case "medium":
+        return 48;
+      case "large":
+        return 56;
       default:
-        return {
-          paddingVertical: 16,
-          paddingHorizontal: 24,
-          buttonTextStyle: { fontSize: 16 }
-        };
+        return 48;
     }
   };
 
-  const sizeStyles = getSizeStyles();
+  // Text size based on button size
+  const getTextSize = () => {
+    switch (size) {
+      case "small":
+        return 14;
+      case "medium":
+        return 16;
+      case "large":
+        return 18;
+      default:
+        return 16;
+    }
+  };
+
+  const buttonStyles = [
+    styles.button,
+    getButtonStyle(),
+    { height: getButtonHeight() },
+    style,
+  ];
+
+  const textStyles = [
+    styles.text,
+    {
+      color: getTextColor(),
+      fontSize: getTextSize(),
+    },
+    textStyle,
+  ];
 
   return (
     <TouchableOpacity
-      onPress={onPress}
-      disabled={disabled || loading}
+      style={buttonStyles}
+      onPress={!disabled && !loading ? onPress : undefined}
       activeOpacity={0.7}
-      style={[
-        styles.button,
-        {
-          backgroundColor: getBackgroundColor(),
-          borderColor: getBorderColor(),
-          borderWidth: variant === 'outline' ? 1 : 0,
-          paddingVertical: sizeStyles.paddingVertical,
-          paddingHorizontal: sizeStyles.paddingHorizontal,
-        },
-        disabled && styles.disabled,
-        style,
-      ]}
+      disabled={disabled || loading}
+      {...rest}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={getTextColor()} />
+        <ActivityIndicator
+          color={variant === "primary" ? "#FFFFFF" : colors.primary}
+          size={size === "small" ? "small" : "small"}
+        />
       ) : (
-        <View style={styles.contentContainer}>
-          {icon && iconPosition === 'left' && (
-            <View style={styles.iconContainer}>{icon}</View>
-          )}
-          <Text
-            style={[
-              styles.buttonText,
-              {
-                color: getTextColor(),
-                fontSize: sizeStyles.buttonTextStyle.fontSize,
-              },
-              textStyle,
-            ]}
-          >
-            {title}
-          </Text>
-          {icon && iconPosition === 'right' && (
-            <View style={styles.iconContainer}>{icon}</View>
-          )}
-        </View>
+        <>
+          {icon && iconPosition === "left" && icon}
+          <Text style={textStyles}>{title}</Text>
+          {icon && iconPosition === "right" && icon}
+        </>
       )}
     </TouchableOpacity>
   );
-};
+}
 
 const styles = StyleSheet.create({
   button: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 8,
-    flexDirection: 'row',
   },
-  contentContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  disabled: {
-    opacity: 0.7,
-  },
-  iconContainer: {
-    marginHorizontal: 8,
+  text: {
+    fontWeight: "600",
   },
 });

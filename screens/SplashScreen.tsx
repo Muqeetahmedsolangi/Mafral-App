@@ -4,7 +4,7 @@ import { View, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/context/ThemeContext';
 
-export const SplashScreen = () => {
+export const  SplashScreen = () => {
   const router = useRouter();
   const { colors } = useTheme();
 

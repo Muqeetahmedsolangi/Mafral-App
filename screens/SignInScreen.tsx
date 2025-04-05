@@ -1,155 +1,127 @@
 // screens/SignInScreen.tsx
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  KeyboardAvoidingView, 
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  KeyboardAvoidingView,
   Platform,
-  ScrollView
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
-import { useTheme } from '@/context/ThemeContext';
+  ScrollView,
+} from "react-native";
+import { router } from "expo-router";
+import { Feather } from "@expo/vector-icons";
 
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { SocialButton } from '@/components/ui/SocialButton';
+import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 export const SignInScreen = () => {
-  const router = useRouter();
   const { colors } = useTheme();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const { signIn, user, isLoading, error } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleSignIn = () => {
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      // Navigate to home screen on successful login
-      router.replace('/(tabs)');
-    }, 1500);
-  };
+  // Watch for authentication state changes
+  useEffect(() => {
+    if (user) {
+      if (!user.isVerified) {
+        console.log("User needs verification, redirecting...");
+        router.replace("/auth/verification");
+      } else {
+        console.log("User authenticated, redirecting to main app...");
+        router.replace("/(tabs)");
+      }
+    }
+  }, [user]);
 
-  const toggleRememberMe = () => {
-    setRememberMe(!rememberMe);
-  };
-
-  const navigateToSignUp = () => {
-    router.push('/auth/signup');
-  };
-
-  const navigateToForgotPassword = () => {
-    router.push('/auth/forgot-password');
+  const handleSignIn = async () => {
+    if (!email || !password) {
+      // Simple validation
+      return;
+    }
+    await signIn(email, password);
   };
 
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
         contentContainerStyle={[
-          styles.container, 
-          { backgroundColor: colors.background }
+          styles.container,
+          { backgroundColor: colors.background },
         ]}
+        keyboardShouldPersistTaps="handled"
       >
-        {/* Back button */}
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Feather name="chevron-left" size={24} color={colors.text} />
-        </TouchableOpacity>
-
         {/* Header */}
-        <Text style={[styles.title, { color: colors.text }]}>Sign in</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Sign In</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Give credential to sign in your account
+          Welcome back! Please enter your details.
         </Text>
 
-        {/* Form */}
-        <View style={styles.form}>
-          <Input
-            icon="mail"
-            placeholder="Type your email"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
-          />
+        {/* Error message if any */}
+        {error && (
+          <Text style={[styles.errorText, { color: colors.error }]}>
+            {error}
+          </Text>
+        )}
 
-          <Input
-            icon="lock"
-            placeholder="Type your password"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
+        {/* Email input */}
+        <Input
+          label="Email"
+          placeholder="Enter your email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          leftIcon="mail"
+          style={styles.input}
+        />
 
-          {/* Remember me and Forgot password */}
-          <View style={styles.formOptions}>
-            <TouchableOpacity 
-              style={styles.rememberMe} 
-              onPress={toggleRememberMe}
-            >
-              <View style={[
-                styles.checkbox, 
-                { 
-                  backgroundColor: rememberMe ? colors.primary : 'transparent',
-                  borderColor: rememberMe ? colors.primary : colors.border
-                }
-              ]}>
-                {rememberMe && <Feather name="check" size={12} color="#FFF" />}
-              </View>
-              <Text style={[styles.rememberText, { color: colors.text }]}>
-                Remember Me
-              </Text>
-            </TouchableOpacity>
+        {/* Password input */}
+        <Input
+          label="Password"
+          placeholder="Enter your password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+          leftIcon="lock"
+          rightIcon={showPassword ? "eye-off" : "eye"}
+          onRightIconPress={() => setShowPassword(!showPassword)}
+          style={styles.input}
+        />
 
-            <TouchableOpacity onPress={navigateToForgotPassword}>
-              <Text style={[styles.forgotPassword, { color: colors.primary }]}>
-                Forgot Password?
-              </Text>
-            </TouchableOpacity>
-          </View>
+        {/* Forgot password */}
+        <TouchableOpacity
+          style={styles.forgotPasswordContainer}
+          onPress={() => router.push("/auth/forgot-password")}
+        >
+          <Text style={[styles.forgotPasswordText, { color: colors.primary }]}>
+            Forgot password?
+          </Text>
+        </TouchableOpacity>
 
-          {/* Sign in button */}
-          <Button
-            title="SIGN IN"
-            onPress={handleSignIn}
-            loading={loading}
-            style={styles.signInButton}
-          />
-
-          {/* Social sign in */}
-          <View style={styles.orContainer}>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <Text style={[styles.orText, { color: colors.textSecondary }]}>
-              or continue with
-            </Text>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          </View>
-
-          <View style={styles.socialButtons}>
-            <SocialButton type="facebook" onPress={() => {}} />
-            <SocialButton type="google" onPress={() => {}} />
-            <SocialButton type="apple" onPress={() => {}} />
-          </View>
-        </View>
+        {/* Sign in button */}
+        <Button
+          title="SIGN IN"
+          onPress={handleSignIn}
+          loading={isLoading}
+          disabled={isLoading || !email || !password}
+          style={styles.signInButton}
+        />
 
         {/* Sign up link */}
-        <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: colors.textSecondary }]}>
-            Don't have an account?{' '}
+        <View style={styles.signUpContainer}>
+          <Text style={[styles.signUpText, { color: colors.textSecondary }]}>
+            Don't have an account?
           </Text>
-          <TouchableOpacity onPress={navigateToSignUp}>
-            <Text style={[styles.signUpLink, { color: colors.primary }]}>
-              Sign In
+          <TouchableOpacity onPress={() => router.push("/auth/signup")}>
+            <Text style={[styles.signUpLinkText, { color: colors.primary }]}>
+              Sign up
             </Text>
           </TouchableOpacity>
         </View>
@@ -165,78 +137,45 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 40,
   },
-  backButton: {
-    marginBottom: 20,
-  },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: "700",
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
     marginBottom: 32,
   },
-  form: {
-    width: '100%',
+  input: {
+    marginBottom: 16,
   },
-  formOptions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 16,
+  forgotPasswordContainer: {
+    alignSelf: "flex-end",
+    marginBottom: 24,
   },
-  rememberMe: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  rememberText: {
+  forgotPasswordText: {
     fontSize: 14,
-  },
-  forgotPassword: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   signInButton: {
+    marginVertical: 16,
+  },
+  signUpContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
     marginTop: 16,
   },
-  orContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-  },
-  orText: {
-    paddingHorizontal: 16,
+  signUpText: {
     fontSize: 14,
+    marginRight: 4,
   },
-  socialButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    marginBottom: 32,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 'auto',
-  },
-  footerText: {
+  signUpLinkText: {
     fontSize: 14,
+    fontWeight: "600",
   },
-  signUpLink: {
+  errorText: {
     fontSize: 14,
-    fontWeight: '600',
+    marginBottom: 16,
+    textAlign: "center",
   },
 });

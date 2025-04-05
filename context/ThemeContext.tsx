@@ -1,23 +1,20 @@
 // context/ThemeContext.tsx
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import { Appearance } from 'react-native';
-import { colors, typography, shadows, spacing, borderRadius } from '@/app/styles/designTokens';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useColorScheme } from "react-native";
 
-type ThemeType = 'light' | 'dark';
+// Theme type definition
+type ThemeType = "light" | "dark" | "system";
 
+// Theme color definitions
 interface ThemeColors {
-  // Background colors
   background: string;
   card: string;
   surface: string;
   surfaceVariant: string;
-  
-  // Text colors
   text: string;
   textSecondary: string;
   textMuted: string;
-  
-  // Brand colors
   primary: string;
   secondary: {
     yellow: string;
@@ -25,20 +22,14 @@ interface ThemeColors {
     green: string;
     darkOrange: string;
   };
-  
-  // State colors
   info: string;
   success: string;
   warning: string;
   error: string;
-  
-  // UI element colors
   border: string;
   divider: string;
   icon: string;
   iconInactive: string;
-  
-  // Tab bar specific
   tabBar: string;
   tabBarBorder: string;
   tabBarActive: string;
@@ -46,181 +37,173 @@ interface ThemeColors {
   tabBarActiveIndicator: string;
 }
 
-interface ThemeContextType {
-  theme: ThemeType;
-  isDarkMode: boolean;
-  toggleTheme: () => void;
-  resetToSystemTheme: () => void;
-  isOverridingSystem: boolean;
-  colors: ThemeColors;
-  typography: typeof typography;
-  spacing: typeof spacing;
-  borderRadius: typeof borderRadius;
-  shadows: typeof shadows.light | typeof shadows.dark;
-}
-
-interface ThemeProviderProps {
-  children: ReactNode;
-}
-
 // Create light and dark color themes
 const lightColors: ThemeColors = {
-  // Background colors
-  background: colors.background.light,
-  card: '#FFFFFF',
-  surface: '#F8F8F8',
-  surfaceVariant: '#F0F0F0',
-  
-  // Text colors
-  text: colors.text.dark,
-  textSecondary: '#333333',
-  textMuted: '#757575',
-  
-  // Brand colors
-  primary: colors.primary.orange,
+  background: "#FFFFFF",
+  card: "#FFFFFF",
+  surface: "#F8F8F8",
+  surfaceVariant: "#F0F0F0",
+  text: "#000000",
+  textSecondary: "#333333",
+  textMuted: "#757575",
+  primary: "#FF5722", // Orange primary color
   secondary: {
-    yellow: colors.secondary.yellow,
-    blue: colors.secondary.blue,
-    green: colors.secondary.green,
-    darkOrange: colors.secondary.darkOrange,
+    yellow: "#FFC107",
+    blue: "#2196F3",
+    green: "#4CAF50",
+    darkOrange: "#E64A19",
   },
-  
-  // State colors
-  info: colors.state.info,
-  success: colors.state.success,
-  warning: colors.state.warning,
-  error: colors.state.error,
-  
-  // UI element colors
-  border: colors.secondary.grey2,
-  divider: colors.secondary.grey,
-  icon: '#000000',
-  iconInactive: '#8E8E8E',
-  
-  // Tab bar specific
-  tabBar: '#FFFFFF',
-  tabBarBorder: 'rgba(0, 0, 0, 0.1)',
-  tabBarActive: '#000000',
-  tabBarInactive: '#8E8E8E',
-  tabBarActiveIndicator: colors.primary.orange,
+  info: "#2196F3",
+  success: "#4CAF50",
+  warning: "#FFC107",
+  error: "#F44336",
+  border: "#CCCCCC",
+  divider: "#EEEEEE",
+  icon: "#000000",
+  iconInactive: "#8E8E8E",
+  tabBar: "#FFFFFF",
+  tabBarBorder: "rgba(0, 0, 0, 0.1)",
+  tabBarActive: "#000000",
+  tabBarInactive: "#8E8E8E",
+  tabBarActiveIndicator: "#FF5722",
 };
 
 const darkColors: ThemeColors = {
-  // Background colors
-  background: colors.background.dark,
-  card: '#1A1A1A',
-  surface: '#262626',
-  surfaceVariant: '#2C2C2C',
-  
-  // Text colors
-  text: colors.text.light,
-  textSecondary: '#E0E0E0',
-  textMuted: '#A0A0A0',
-  
-  // Brand colors
-  primary: colors.primary.orange,
+  background: "#121212",
+  card: "#1E1E1E",
+  surface: "#282828",
+  surfaceVariant: "#323232",
+  text: "#FFFFFF",
+  textSecondary: "#E0E0E0",
+  textMuted: "#AAAAAA",
+  primary: "#FF7043", // Slightly lighter orange for dark mode
   secondary: {
-    yellow: colors.secondary.yellow,
-    blue: colors.secondary.blue,
-    green: colors.secondary.green,
-    darkOrange: colors.secondary.darkOrange,
+    yellow: "#FFD54F",
+    blue: "#64B5F6",
+    green: "#81C784",
+    darkOrange: "#FF8A65",
   },
-  
-  // State colors
-  info: colors.state.info,
-  success: colors.state.success,
-  warning: colors.state.warning,
-  error: colors.state.error,
-  
-  // UI element colors
-  border: '#3A3A3A',
-  divider: '#3A3A3A',
-  icon: '#FFFFFF',
-  iconInactive: '#8E8E8E',
-  
-  // Tab bar specific
-  tabBar: '#000000',
-  tabBarBorder: '#262626',
-  tabBarActive: '#FFFFFF',
-  tabBarInactive: '#8E8E8E',
-  tabBarActiveIndicator: colors.primary.orange,
+  info: "#64B5F6",
+  success: "#81C784",
+  warning: "#FFD54F",
+  error: "#E57373",
+  border: "#444444",
+  divider: "#333333",
+  icon: "#FFFFFF",
+  iconInactive: "#8E8E8E",
+  tabBar: "#1E1E1E",
+  tabBarBorder: "rgba(255, 255, 255, 0.1)",
+  tabBarActive: "#FFFFFF",
+  tabBarInactive: "#8E8E8E",
+  tabBarActiveIndicator: "#FF7043",
 };
 
-// Default context
-const defaultContextValue: ThemeContextType = {
-  theme: 'light',
-  isDarkMode: false,
-  toggleTheme: () => {},
-  resetToSystemTheme: () => {},
-  isOverridingSystem: false,
-  colors: lightColors,
-  typography,
-  spacing,
-  borderRadius,
-  shadows: shadows.light,
-};
+// Theme context type
+interface ThemeContextType {
+  theme: ThemeType;
+  isDarkMode: boolean;
+  colors: ThemeColors;
+  setTheme: (theme: ThemeType) => void;
+  toggleTheme: () => void;
+  isOverridingSystem: boolean;
+  resetToSystemTheme: () => void;
+}
+
+// Theme storage key - this will persist across app restarts and sign-outs
+const THEME_STORAGE_KEY = "app_theme";
 
 // Create context
-const ThemeContext = createContext<ThemeContextType>(defaultContextValue);
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-// Custom hook for easily accessing theme data
-export const useTheme = () => useContext(ThemeContext);
+// Theme provider component
+export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const systemColorScheme = useColorScheme();
+  const [theme, setThemeState] = useState<ThemeType>("system");
+  const [isLoading, setIsLoading] = useState(true);
 
-// Provider component
-export const ThemeProvider = ({ children }: ThemeProviderProps) => {
-  // Set initial theme based on device settings
-  const [theme, setTheme] = useState<ThemeType>(Appearance.getColorScheme() as ThemeType || 'light');
-  
-  // Track if we're manually overriding the system theme
-  const [isOverridingSystem, setIsOverridingSystem] = useState(false);
-  
-  // Listen for system theme changes
+  // Load saved theme from storage on component mount
   useEffect(() => {
-    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
-      // Only update if we're not overriding the system theme
-      if (!isOverridingSystem) {
-        setTheme(colorScheme as ThemeType || 'light');
+    const loadTheme = async () => {
+      try {
+        const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
+        if (savedTheme) {
+          setThemeState(savedTheme as ThemeType);
+        }
+      } catch (error) {
+        console.error("Failed to load theme:", error);
+      } finally {
+        setIsLoading(false);
       }
-    });
-    
-    return () => subscription.remove();
-  }, [isOverridingSystem]);
-  
-  // Function to toggle theme
+    };
+
+    loadTheme();
+  }, []);
+
+  // Determine if dark mode should be active
+  const isDarkMode =
+    theme === "system" ? systemColorScheme === "dark" : theme === "dark";
+
+  // Save theme to storage whenever it changes
+  const setTheme = async (newTheme: ThemeType) => {
+    setThemeState(newTheme);
+    try {
+      await AsyncStorage.setItem(THEME_STORAGE_KEY, newTheme);
+      console.log(`Theme changed to ${newTheme} and saved to storage`);
+    } catch (error) {
+      console.error("Failed to save theme:", error);
+    }
+  };
+
+  // Toggle between light and dark
   const toggleTheme = () => {
-    setIsOverridingSystem(true);
-    setTheme(theme === 'dark' ? 'light' : 'dark');
+    const newTheme = isDarkMode ? "light" : "dark";
+    setTheme(newTheme);
   };
-  
-  // Function to reset to system theme
+
+  // Check if user is overriding system preference
+  const isOverridingSystem = theme !== "system";
+
+  // Reset to system theme
   const resetToSystemTheme = () => {
-    setIsOverridingSystem(false);
-    setTheme(Appearance.getColorScheme() as ThemeType || 'light');
+    setTheme("system");
   };
-  
-  // Determine if we're in dark mode
-  const isDarkMode = theme === 'dark';
-  
-  // Get the appropriate colors and shadows based on the theme
-  const themeColors = isDarkMode ? darkColors : lightColors;
-  const themeShadows = isDarkMode ? shadows.dark : shadows.light;
-  
+
+  // Get current theme colors
+  const colors = isDarkMode ? darkColors : lightColors;
+
+  // Context value
+  const contextValue: ThemeContextType = {
+    theme,
+    isDarkMode,
+    colors,
+    setTheme,
+    toggleTheme,
+    isOverridingSystem,
+    resetToSystemTheme,
+  };
+
+  // Display loading indicator while theme is loading
+  if (isLoading) {
+    // You can return a loading indicator here if needed
+    return null;
+  }
+
   return (
-    <ThemeContext.Provider 
-      value={{
-        theme,
-        isDarkMode,
-        toggleTheme,
-        resetToSystemTheme,
-        isOverridingSystem,
-        colors: themeColors,
-        typography,
-        spacing,
-        borderRadius,
-        shadows: themeShadows,
-      }}
-    >
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );
+};
+
+// Custom hook for using theme
+export const useTheme = (): ThemeContextType => {
+  const context = useContext(ThemeContext);
+
+  if (!context) {
+    throw new Error("useTheme must be used within a ThemeProvider");
+  }
+
+  return context;
 };

@@ -1,58 +1,78 @@
 // screens/SignUpScreen.tsx
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  KeyboardAvoidingView, 
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  KeyboardAvoidingView,
   Platform,
-  ScrollView
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
-import { useTheme } from '@/context/ThemeContext';
+  ScrollView,
+} from "react-native";
+import { router } from "expo-router";
+import { Feather } from "@expo/vector-icons";
 
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { SocialButton } from '@/components/ui/SocialButton';
+import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 export const SignUpScreen = () => {
-  const router = useRouter();
   const { colors } = useTheme();
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { signUp, user, isLoading, error } = useAuth();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  const handleSignUp = () => {
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      // Navigate to verification screen
-      router.push('/auth/verification');
-    }, 1500);
-  };
+  // Watch for authentication state changes
+  useEffect(() => {
+    if (user) {
+      if (!user.isVerified) {
+        console.log("User needs verification, redirecting...");
+        router.replace("/auth/verification");
+      } else {
+        console.log("User authenticated, redirecting to main app...");
+        router.replace("/(tabs)");
+      }
+    }
+  }, [user]);
 
-  const navigateToSignIn = () => {
-    router.push('/auth/signin');
+  const handleSignUp = async () => {
+    // Reset error
+    setLocalError(null);
+
+    // Basic validation
+    if (!name || !email || !password || !confirmPassword) {
+      setLocalError("Please fill in all fields");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setLocalError("Passwords do not match");
+      return;
+    }
+
+    await signUp(email, password, name);
   };
 
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
         contentContainerStyle={[
-          styles.container, 
-          { backgroundColor: colors.background }
+          styles.container,
+          { backgroundColor: colors.background },
         ]}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Back button */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
@@ -60,77 +80,85 @@ export const SignUpScreen = () => {
         </TouchableOpacity>
 
         {/* Header */}
-        <Text style={[styles.title, { color: colors.text }]}>Sign up</Text>
+        <Text style={[styles.title, { color: colors.text }]}>
+          Create Account
+        </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Create account and enjoy all services
+          Please fill in the form to continue
         </Text>
 
-        {/* Form */}
-        <View style={styles.form}>
-          <Input
-            icon="user"
-            placeholder="Type your full name"
-            value={fullName}
-            onChangeText={setFullName}
-          />
+        {/* Error message */}
+        {(error || localError) && (
+          <Text style={[styles.errorText, { color: colors.error }]}>
+            {error || localError}
+          </Text>
+        )}
 
-          <Input
-            icon="mail"
-            placeholder="Type your email"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
-          />
+        {/* Name input */}
+        <Input
+          label="Full Name"
+          placeholder="Enter your full name"
+          value={name}
+          onChangeText={setName}
+          leftIcon="user"
+          style={styles.input}
+        />
 
-          <Input
-            icon="lock"
-            placeholder="Type your password"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
+        {/* Email input */}
+        <Input
+          label="Email"
+          placeholder="Enter your email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          leftIcon="mail"
+          style={styles.input}
+        />
 
-          <Input
-            icon="lock"
-            placeholder="Type your confirm password"
-            secureTextEntry
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-          />
+        {/* Password input */}
+        <Input
+          label="Password"
+          placeholder="Enter your password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+          leftIcon="lock"
+          rightIcon={showPassword ? "eye-off" : "eye"}
+          onRightIconPress={() => setShowPassword(!showPassword)}
+          style={styles.input}
+        />
 
-          {/* Sign up button */}
-          <Button
-            title="SIGN UP"
-            onPress={handleSignUp}
-            loading={loading}
-            style={styles.signUpButton}
-          />
+        {/* Confirm password */}
+        <Input
+          label="Confirm Password"
+          placeholder="Confirm your password"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry={!showConfirmPassword}
+          leftIcon="lock"
+          rightIcon={showConfirmPassword ? "eye-off" : "eye"}
+          onRightIconPress={() => setShowConfirmPassword(!showConfirmPassword)}
+          style={styles.input}
+        />
 
-          {/* Social sign up */}
-          <View style={styles.orContainer}>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <Text style={[styles.orText, { color: colors.textSecondary }]}>
-              or continue with
-            </Text>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          </View>
-
-          <View style={styles.socialButtons}>
-            <SocialButton type="facebook" onPress={() => {}} />
-            <SocialButton type="google" onPress={() => {}} />
-            <SocialButton type="apple" onPress={() => {}} />
-          </View>
-        </View>
+        {/* Sign up button */}
+        <Button
+          title="SIGN UP"
+          onPress={handleSignUp}
+          loading={isLoading}
+          disabled={isLoading}
+          style={styles.signUpButton}
+        />
 
         {/* Sign in link */}
-        <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: colors.textSecondary }]}>
-            Already have an account?{' '}
+        <View style={styles.signInContainer}>
+          <Text style={[styles.signInText, { color: colors.textSecondary }]}>
+            Already have an account?
           </Text>
-          <TouchableOpacity onPress={navigateToSignIn}>
-            <Text style={[styles.signInLink, { color: colors.primary }]}>
-              Sign In
+          <TouchableOpacity onPress={() => router.push("/auth/signin")}>
+            <Text style={[styles.signInLinkText, { color: colors.primary }]}>
+              Sign in
             </Text>
           </TouchableOpacity>
         </View>
@@ -143,55 +171,44 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 50,
     paddingBottom: 40,
   },
   backButton: {
     marginBottom: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: "700",
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    marginBottom: 32,
+    marginBottom: 24,
   },
-  form: {
-    width: '100%',
+  input: {
+    marginBottom: 16,
   },
   signUpButton: {
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  signInContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
     marginTop: 16,
   },
-  orContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-  },
-  orText: {
-    paddingHorizontal: 16,
+  signInText: {
     fontSize: 14,
+    marginRight: 4,
   },
-  socialButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    marginBottom: 32,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 'auto',
-  },
-  footerText: {
+  signInLinkText: {
     fontSize: 14,
+    fontWeight: "600",
   },
-  signInLink: {
+  errorText: {
     fontSize: 14,
-    fontWeight: '600',
+    marginBottom: 16,
+    textAlign: "center",
   },
 });

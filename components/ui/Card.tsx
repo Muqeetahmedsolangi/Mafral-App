@@ -1,114 +1,75 @@
 // components/ui/Card.tsx
-import React, { ReactNode } from 'react';
-import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
-import { useTheme } from '@/context/ThemeContext';
+import React from "react";
+import { View, StyleSheet, ViewStyle, ViewProps } from "react-native";
+import { useTheme } from "@/context/ThemeContext";
 
-interface CardProps {
-  children: ReactNode;
-  variant?: 'elevated' | 'outlined' | 'filled';
-  style?: StyleProp<ViewStyle>;
-  contentStyle?: StyleProp<ViewStyle>;
-  testID?: string;
+interface CardProps extends ViewProps {
+  children: React.ReactNode;
+  variant?: "default" | "outlined" | "filled" | "elevated";
+  style?: ViewStyle;
 }
 
-export const Card = ({
+export function Card({
   children,
-  variant = 'elevated',
+  variant = "default",
   style,
-  contentStyle,
-  testID,
-}: CardProps) => {
-  const { colors, borderRadius, shadows } = useTheme();
+  ...rest
+}: CardProps) {
+  const { colors } = useTheme();
 
-  // Determine card styles based on variant
-  const getCardStyles = () => {
+  // Card styles based on variant
+  const getCardStyle = () => {
     switch (variant) {
-      case 'elevated':
+      case "default":
         return {
-          ...shadows.md,
           backgroundColor: colors.card,
+          borderWidth: 0,
+          shadowOpacity: 0,
         };
-      case 'outlined':
+      case "outlined":
         return {
           backgroundColor: colors.card,
           borderWidth: 1,
           borderColor: colors.border,
+          shadowOpacity: 0,
         };
-      case 'filled':
+      case "filled":
         return {
           backgroundColor: colors.surfaceVariant,
+          borderWidth: 0,
+          shadowOpacity: 0,
+        };
+      case "elevated":
+        return {
+          backgroundColor: colors.card,
+          borderWidth: 0,
+          shadowColor: colors.text,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 4,
         };
       default:
         return {
-          ...shadows.md,
           backgroundColor: colors.card,
+          borderWidth: 0,
         };
     }
   };
 
+  const cardStyles = [styles.card, getCardStyle(), style];
+
   return (
-    <View
-      testID={testID}
-      style={[
-        styles.card,
-        {
-          borderRadius: borderRadius.md,
-          ...getCardStyles(),
-        },
-        style,
-      ]}
-    >
-      <View style={[styles.content, contentStyle]}>{children}</View>
+    <View style={cardStyles} {...rest}>
+      {children}
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   card: {
-    overflow: 'hidden',
-  },
-  content: {
+    borderRadius: 12,
     padding: 16,
+    overflow: "hidden",
   },
 });
-
-// Card subcomponents for more structured usage
-interface CardSubComponentProps {
-  children: ReactNode;
-  style?: StyleProp<ViewStyle>;
-}
-
-// Define the subComponent styles here
-const subComponentStyles = StyleSheet.create({
-  header: {
-    paddingBottom: 8,
-  },
-  cardContent: {
-    paddingVertical: 8,
-  },
-  footer: {
-    paddingTop: 8,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    width: '100%',
-    marginVertical: 8,
-  },
-});
-
-export const CardHeader = ({ children, style }: CardSubComponentProps) => (
-  <View style={[subComponentStyles.header, style]}>{children}</View>
-);
-
-export const CardContent = ({ children, style }: CardSubComponentProps) => (
-  <View style={[subComponentStyles.cardContent, style]}>{children}</View>
-);
-
-export const CardFooter = ({ children, style }: CardSubComponentProps) => (
-  <View style={[subComponentStyles.footer, style]}>{children}</View>
-);
-
-export const CardDivider = () => {
-  const { colors } = useTheme();
-  return <View style={[subComponentStyles.divider, { backgroundColor: colors.border }]} />;
-};
