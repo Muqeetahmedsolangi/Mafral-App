@@ -84,7 +84,7 @@ export const ForgotPasswordScreen = () => {
         {/* Form */}
         <View style={styles.form}>
           <Input
-            icon="mail"
+            // icon="mail" // Removed as 'icon' is not a valid prop
             placeholder="Enter your email"
             keyboardType="email-address"
             autoCapitalize="none"

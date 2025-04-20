@@ -1,13 +1,15 @@
 // context/ThemeContext.tsx
+// context/ThemeContext.tsx
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { useColorScheme, OpaqueColorValue } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useColorScheme } from "react-native";
 
 // Theme type definition
 type ThemeType = "light" | "dark" | "system";
 
 // Theme color definitions
 interface ThemeColors {
+  danger: string | OpaqueColorValue | undefined;
   background: string;
   card: string;
   surface: string;
@@ -66,6 +68,7 @@ const lightColors: ThemeColors = {
   tabBarActive: "#000000",
   tabBarInactive: "#8E8E8E",
   tabBarActiveIndicator: "#FF5722",
+  danger: undefined
 };
 
 const darkColors: ThemeColors = {
@@ -96,6 +99,7 @@ const darkColors: ThemeColors = {
   tabBarActive: "#FFFFFF",
   tabBarInactive: "#8E8E8E",
   tabBarActiveIndicator: "#FF7043",
+  danger: undefined
 };
 
 // Theme context type

@@ -1,5 +1,5 @@
 import React from 'react';
-import { SignUpScreen } from '@/screens/SignUpScreen';
+import { SignUpScreen } from '@/screens/auth/SignUpScreen';
 
 export default function SignUp() {
   return <SignUpScreen />;

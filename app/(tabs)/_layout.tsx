@@ -37,6 +37,17 @@ export default function TabsLayout() {
       />
 
       <Tabs.Screen
+        name="events"
+        options={{
+          title: "Events",
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="calendar" size={size} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
         name="explore"
         options={{
           title: "Explore",

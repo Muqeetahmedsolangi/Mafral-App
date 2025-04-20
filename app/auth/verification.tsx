@@ -1,5 +1,5 @@
 import React from 'react';
-import { VerificationScreen } from '@/screens/VerificationScreen';
+import { VerificationScreen } from '@/screens/auth/VerificationScreen';
 
 export default function Verification() {
   return <VerificationScreen />;
