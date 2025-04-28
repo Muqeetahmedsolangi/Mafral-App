@@ -10,250 +10,13 @@ import {
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { Feather } from "@expo/vector-icons";
-import CommentModal, { CommentType } from "@/components/models/CommentModal";
+import CommentModal from "@/components/models/CommentModal";
 import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
+import { POSTS, STORIES } from "@/constants/mediaMockData";
+import { MediaPost } from "@/types/media";
 
-// Dummy data for posts
-const POSTS = [
-  {
-    id: "1",
-    user: {
-      id: "user1",
-      name: "Sarah Johnson",
-      avatar: "https://randomuser.me/api/portraits/women/44.jpg",
-    },
-    content:
-      "Just finished my morning hike! The views were breathtaking today. #nature #hiking",
-    image: "https://images.unsplash.com/photo-1501854140801-50d01698950b",
-    likes: 246,
-    comments: 15,
-    timestamp: "35m",
-    commentsList: [
-      {
-        id: "c1",
-        user: {
-          username: "nature_lover",
-          avatar: "https://randomuser.me/api/portraits/women/22.jpg",
-        },
-        text: "This view is absolutely stunning! Where is this hiking trail?",
-        likes: 24,
-        time: "20m",
-      },
-      {
-        id: "c2",
-        user: {
-          username: "mountain_climber",
-          avatar: "https://randomuser.me/api/portraits/men/45.jpg",
-        },
-        text: "The colors in this photo are incredible. What time of day was this?",
-        likes: 17,
-        time: "25m",
-      },
-      {
-        id: "c3",
-        user: {
-          username: "adventure_seeker",
-          avatar: "https://randomuser.me/api/portraits/women/30.jpg",
-        },
-        text: "I've been wanting to go hiking more. Any recommendations for beginner trails?",
-        likes: 8,
-        time: "30m",
-      },
-    ],
-  },
-  {
-    id: "2",
-    user: {
-      id: "user2",
-      name: "Mike Peters",
-      avatar: "https://randomuser.me/api/portraits/men/32.jpg",
-    },
-    content: "New gadget day! Cant wait to try this out. What do you think?",
-    image: "https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2",
-    likes: 189,
-    comments: 32,
-    timestamp: "1h",
-    commentsList: [
-      {
-        id: "c1",
-        user: {
-          username: "tech_enthusiast",
-          avatar: "https://randomuser.me/api/portraits/men/36.jpg",
-        },
-        text: "That's a great model! I got mine last week and the battery life is amazing.",
-        likes: 42,
-        time: "45m",
-      },
-      {
-        id: "c2",
-        user: {
-          username: "gadget_guru",
-          avatar: "https://randomuser.me/api/portraits/women/50.jpg",
-        },
-        text: "Let me know how it performs. I'm thinking of getting one too.",
-        likes: 15,
-        time: "50m",
-      },
-    ],
-  },
-  {
-    id: "3",
-    user: {
-      id: "user3",
-      name: "Emma Wilson",
-      avatar: "https://randomuser.me/api/portraits/women/63.jpg",
-    },
-    content:
-      "Just got these beautiful flowers from my garden! Spring is finally here.",
-    image: "https://images.unsplash.com/photo-1490750967868-88aa4486c946",
-    likes: 421,
-    comments: 28,
-    timestamp: "2h",
-    commentsList: [
-      {
-        id: "c1",
-        user: {
-          username: "flower_lover",
-          avatar: "https://randomuser.me/api/portraits/women/67.jpg",
-        },
-        text: "These are gorgeous! What varieties are you growing this year?",
-        likes: 35,
-        time: "1h",
-      },
-      {
-        id: "c2",
-        user: {
-          username: "gardening_hobbyist",
-          avatar: "https://randomuser.me/api/portraits/men/55.jpg",
-        },
-        text: "Your garden always looks amazing. Any tips for keeping pests away?",
-        likes: 18,
-        time: "1.5h",
-      },
-    ],
-  },
-  {
-    id: "4",
-    user: {
-      id: "user4",
-      name: "David Chen",
-      avatar: "https://randomuser.me/api/portraits/men/86.jpg",
-    },
-    content:
-      "Spent the weekend working on this coding project. Pretty happy with how it turned out!",
-    image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6",
-    likes: 132,
-    comments: 9,
-    timestamp: "3h",
-    commentsList: [
-      {
-        id: "c1",
-        user: {
-          username: "fellow_coder",
-          avatar: "https://randomuser.me/api/portraits/men/18.jpg",
-        },
-        text: "Looks great! What tech stack did you use?",
-        likes: 15,
-        time: "2h",
-      },
-      {
-        id: "c2",
-        user: {
-          username: "dev_jane",
-          avatar: "https://randomuser.me/api/portraits/women/33.jpg",
-        },
-        text: "Clean UI! Is the repository public? Would love to check it out.",
-        likes: 12,
-        time: "2.5h",
-      },
-    ],
-  },
-  {
-    id: "5",
-    user: {
-      id: "user5",
-      name: "Jessica Miller",
-      avatar: "https://randomuser.me/api/portraits/women/17.jpg",
-    },
-    content:
-      "Best coffee shop in town! If youre in the area, you have to check it out. ☕",
-    image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085",
-    likes: 287,
-    comments: 24,
-    timestamp: "5h",
-    commentsList: [
-      {
-        id: "c1",
-        user: {
-          username: "coffee_addict",
-          avatar: "https://randomuser.me/api/portraits/women/19.jpg",
-        },
-        text: "I love their lattes! Did you try the new seasonal blend?",
-        likes: 22,
-        time: "3h",
-      },
-      {
-        id: "c2",
-        user: {
-          username: "cafe_hopper",
-          avatar: "https://randomuser.me/api/portraits/men/23.jpg",
-        },
-        text: "What's the name of this place? I need to add it to my list!",
-        likes: 17,
-        time: "4h",
-      },
-    ],
-  },
-];
-
-// Stories data
-const STORIES = [
-  {
-    id: "your-story",
-    name: "Your Story",
-    avatar: "https://randomuser.me/api/portraits/lego/1.jpg",
-    isYourStory: true,
-    hasUnseenStory: false,
-  },
-  {
-    id: "story1",
-    name: "Emily",
-    avatar: "https://randomuser.me/api/portraits/women/1.jpg",
-    hasUnseenStory: true,
-  },
-  {
-    id: "story2",
-    name: "James",
-    avatar: "https://randomuser.me/api/portraits/men/2.jpg",
-    hasUnseenStory: true,
-  },
-  {
-    id: "story3",
-    name: "Olivia",
-    avatar: "https://randomuser.me/api/portraits/women/3.jpg",
-    hasUnseenStory: true,
-  },
-  {
-    id: "story4",
-    name: "William",
-    avatar: "https://randomuser.me/api/portraits/men/4.jpg",
-    hasUnseenStory: false,
-  },
-  {
-    id: "story5",
-    name: "Sophia",
-    avatar: "https://randomuser.me/api/portraits/women/5.jpg",
-    hasUnseenStory: true,
-  },
-  {
-    id: "story6",
-    name: "Benjamin",
-    avatar: "https://randomuser.me/api/portraits/men/6.jpg",
-    hasUnseenStory: false,
-  },
-];
-
-export default function HomeScreen() {
+export default function MediaScreen() {
   const { colors } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
   const [likedPosts, setLikedPosts] = useState<string[]>([]);
@@ -261,7 +24,7 @@ export default function HomeScreen() {
 
   // State for comments modal
   const [isCommentsVisible, setIsCommentsVisible] = useState(false);
-  const [currentPost, setCurrentPost] = useState(null);
+  const [currentPost, setCurrentPost] = useState<MediaPost | null>(null);
   const [commentLiked, setCommentLiked] = useState<string[]>([]);
 
   const onRefresh = () => {
@@ -270,6 +33,15 @@ export default function HomeScreen() {
     setTimeout(() => {
       setRefreshing(false);
     }, 2000);
+  };
+
+  const navigateToReels = (post: MediaPost) => {
+    // Navigate to reels screen and pass the post id to display related content
+    router.push({
+      pathname: "/media/reels",
+      params: { postId: post.id }
+    });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
   const toggleLike = (postId: string) => {
@@ -291,7 +63,7 @@ export default function HomeScreen() {
   };
 
   // Comments modal functions
-  const openComments = (post) => {
+  const openComments = (post: MediaPost) => {
     setCurrentPost(post);
     setIsCommentsVisible(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -320,7 +92,7 @@ export default function HomeScreen() {
     // Here you would typically add the comment to your backend
   };
 
-  const renderStoryItem = ({ item }) => (
+  const renderStoryItem = ({ item }: { item: { id: string; avatar: string; name: string; hasUnseenStory: boolean; isYourStory: boolean } }) => (
     <TouchableOpacity style={styles.storyContainer}>
       <View
         style={[
@@ -360,7 +132,7 @@ export default function HomeScreen() {
     </View>
   );
 
-  const renderPost = ({ item }) => {
+  const renderPost = ({ item }: { item: MediaPost }) => {
     const isLiked = likedPosts.includes(item.id);
     const isSaved = savedPosts.includes(item.id);
 
@@ -392,8 +164,14 @@ export default function HomeScreen() {
           {item.content}
         </Text>
 
-        {/* Post Image */}
-        <Image source={{ uri: item.image }} style={styles.postImage} />
+        {/* Post Image - Make it touchable to navigate to reels */}
+        <TouchableOpacity onPress={() => navigateToReels(item)} activeOpacity={0.9}>
+          <Image source={{ uri: item.image }} style={styles.postImage} />
+          <View style={styles.reelsIndicator}>
+            <Feather name="film" size={14} color="#FFFFFF" />
+            <Text style={styles.reelsText}>Tap to view</Text>
+          </View>
+        </TouchableOpacity>
 
         {/* Post Actions */}
         <View style={styles.postActions}>
@@ -490,7 +268,7 @@ export default function HomeScreen() {
         <CommentModal
           isVisible={isCommentsVisible}
           onClose={closeComments}
-          comments={currentPost.commentsList as CommentType[]}
+          comments={currentPost.commentsList}
           onLikeComment={handleCommentLike}
           onReplyComment={handleReplyComment}
           onPostComment={handlePostComment}
@@ -607,6 +385,21 @@ const styles = StyleSheet.create({
   postImage: {
     width: "100%",
     height: 300,
+  },
+  reelsIndicator: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    padding: 6,
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reelsText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    marginLeft: 4,
   },
   postActions: {
     flexDirection: "row",

@@ -28,10 +28,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: "Media",
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Feather name="home" size={size} color={color} />
+            <Feather name="image" size={size} color={color} />
           ),
         }}
       />
@@ -64,17 +64,6 @@ export default function TabsLayout() {
           headerTitle: "Create Post",
           tabBarIcon: ({ color, size }) => (
             <Feather name="plus-square" size={size} color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="reels"
-        options={{
-          title: "Reels",
-          headerShown: false, // Hide the header for Reels tab
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="film" size={size} color={color} />
           ),
         }}
       />

@@ -1,4 +1,5 @@
 import { Event, Category } from "@/types/events";
+import { format } from "date-fns";
 
 export const MOCK_CATEGORIES: Category[] = [
   {
@@ -443,20 +444,37 @@ export const getEventWithRelations = (id: string) => {
   return getEventById(id);
 };
 
-// Add this function to your MockData.ts file
+// Update the getEventWithDetails function to return properly structured data
 export const getEventWithDetails = (id: string) => {
   const event = getEventById(id);
   if (!event) return null;
 
-  // Transform the event data to match the expected format
+  // Create properly formatted coordinates
+  const coordinates = {
+    latitude:
+      event.location?.coordinates?.latitude ||
+      (event.location as any)?.latitude ||
+      23.7783,
+    longitude:
+      event.location?.coordinates?.longitude ||
+      (event.location as any)?.longitude ||
+      90.3756,
+  };
+
   return {
     ...event,
-    imageUrl: event.coverImage || event.image,
-    startDate: event.date?.start || event.startDate,
-    startsAt: event.time?.start || event.startsAt,
-    ticketTypes: (event.tickets || []).map((ticket) => ({
-      id: ticket.id || `ticket-${Math.random()}`,
-      name: ticket.type || ticket.name,
+    imageUrl:
+      event.coverImage ||
+      (event as any).imageUrl ||
+      "https://via.placeholder.com/500",
+    startDate: (event.date?.start || event.startDate) as string,
+    startsAt:
+      event.startsAt ||
+      (event as any).time?.start ||
+      format(new Date(event.date?.start || ""), "h:mm a"),
+    ticketTypes: (event.tickets || []).map((ticket: any, index: number) => ({
+      id: ticket.id || `ticket-${index}`,
+      name: ticket.type || "Standard Ticket",
       price: ticket.price || 0,
       currency: ticket.currency || "$",
       description: ticket.description || "",
@@ -466,36 +484,60 @@ export const getEventWithDetails = (id: string) => {
     attendeeCount: event.attendees || 0,
     isFree:
       event.isFree ||
-      (event.tickets && event.tickets.some((t) => t.price === 0)) ||
+      (event.tickets && event.tickets.some((t: any) => t.price === 0)) ||
       false,
     location: {
       name: event.location?.name || "Venue",
       address: event.location?.address || "",
       city: event.location?.city || "",
       country: event.location?.country || "",
-      latitude:
-        event.location?.coordinates?.latitude ||
-        event.location?.latitude ||
-        23.7783,
-      longitude:
-        event.location?.coordinates?.longitude ||
-        event.location?.longitude ||
-        90.3756,
+      // Ensure we have both direct latitude/longitude and coordinates object for compatibility
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+      coordinates: coordinates,
     },
     organizer: {
       name: event.organizer?.name || "Event Organizer",
       description:
         event.organizer?.description || "Event Organizer Description",
-      logo: event.organizer?.logo || "https://via.placeholder.com/150",
+      logo:
+        event.organizer?.logo ||
+        event.organizer?.avatar ||
+        "https://via.placeholder.com/150",
       contactEmail: event.organizer?.contactEmail || null,
+    },
+    category: {
+      id: event.category?.id || "cat-1",
+      name: event.category?.name || "General",
+      icon: event.category?.icon || "calendar",
+      color: event.category?.color || "#6200EE",
     },
   };
 };
 
-// Add this function to your existing MockData.ts file
+// Store purchased tickets in memory (in a real app, this would use AsyncStorage or a database)
+const userTickets: any[] = [];
 
+// Get user tickets
+export const getUserTickets = () => {
+  return userTickets;
+};
+
+// Save a new ticket
+export const saveTicket = (ticket: any) => {
+  userTickets.push(ticket);
+  return ticket;
+};
+
+// Get a specific ticket by ID
 export const getTicketById = (id: string) => {
-  const event = getEventById(id.split("-ticket-")[0]);
+  // First check in userTickets
+  const savedTicket = userTickets.find((ticket) => ticket.id === id);
+  if (savedTicket) return savedTicket;
+
+  // If not found, create a new ticket from event data
+  const eventId = id.split("-ticket-")[0];
+  const event = getEventById(eventId);
   if (!event) return null;
 
   return {
@@ -503,18 +545,19 @@ export const getTicketById = (id: string) => {
     event: {
       id: event.id,
       title: event.title,
-      date: event.startDate,
-      imageUrl: event.coverImage || event.imageUrl,
+      date: event.date?.start || new Date().toISOString(),
+      imageUrl: event.coverImage || "https://via.placeholder.com/500",
       location: {
-        name: event.location.name,
-        address: event.location.address,
-        city: event.location.city,
-        country: event.location.country,
+        name: event.location?.name || "Venue",
+        address: event.location?.address || "",
+        city: event.location?.city || "",
+        country: event.location?.country || "",
       },
     },
-    ticketType: event.tickets[0]?.type || "General Admission",
-    price: event.tickets[0]?.price || 0,
-    currency: event.tickets[0]?.currency || "$",
+    ticketType:
+      (event.tickets && event.tickets[0]?.type) || "General Admission",
+    price: (event.tickets && event.tickets[0]?.price) || 0,
+    currency: (event.tickets && event.tickets[0]?.currency) || "$",
     purchaseDate: new Date().toISOString(),
     seat: "05",
     qrCode: `TICKET-${id}-${Math.random().toString(36).substring(7)}`,

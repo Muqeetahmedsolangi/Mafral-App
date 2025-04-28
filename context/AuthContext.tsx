@@ -9,6 +9,7 @@ type User = {
   fullName?: string;
   isVerified: boolean;
   createdAt?: string;
+  profilePicture?: string; // Added profilePicture property
 };
 
 // Auth context type definition
@@ -21,6 +22,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   verifyOTP: (code: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  signInWithProvider: (provider: string) => Promise<void>;
 }
 
 // Storage keys
@@ -263,6 +265,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const signInWithProvider = async (provider: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // This is a mock implementation. In a real app, you'd integrate with Firebase, Auth0, etc.
+      console.log(`Signing in with ${provider}...`);
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Mock successful login
+      setUser({
+        id: 'social-user-123',
+        email: `user_${Math.random().toString(36).substring(2, 8)}@example.com`,
+        fullName: 'Social User',
+        isVerified: true,
+        profilePicture: 'https://randomuser.me/api/portraits/men/32.jpg',
+      });
+      
+      // Store authentication token
+      await AsyncStorage.setItem('@auth_token', 'social_mock_token');
+    } catch (err) {
+      setError(`Failed to sign in with ${provider}. Please try again.`);
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Context value
   const contextValue: AuthContextType = {
     user,
@@ -273,11 +304,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     signOut,
     verifyOTP,
     resetPassword,
+    signInWithProvider,
   };
 
   return (
     <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
+
+
 };
 
 // Custom hook for using auth

@@ -18,36 +18,68 @@ import { useTheme } from "@/context/ThemeContext";
 import { Feather } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import MapView, { Marker } from "react-native-maps";
+import MapView, { Marker, MapViewProps } from "react-native-maps";
 import { Button } from "@/components/ui/Button";
 import LocationSelectionModal from "@/components/models/LocationSelectionModal";
 
 const { width, height } = Dimensions.get('window');
 
-export const LocationPermissionScreen = () => {
+// Define proper TypeScript interfaces
+interface LocationObject {
+  coords: {
+    latitude: number;
+    longitude: number;
+    accuracy: number | null;
+    altitude?: number | null;
+    altitudeAccuracy?: number | null;
+    heading?: number | null;
+    speed?: number | null;
+  };
+  timestamp: number;
+}
+
+interface StoredLocationData {
+  latitude: number;
+  longitude: number;
+  timestamp: number;
+  address?: string;
+}
+
+interface AddressObject {
+  street?: string;
+  city?: string;
+  region?: string;
+  country?: string;
+  postalCode?: string;
+  name?: string;
+  district?: string;
+}
+
+export const LocationPermissionScreen: React.FC = () => {
   const { colors } = useTheme();
   const [locationStatus, setLocationStatus] = useState<
     "idle" | "loading" | "granted" | "denied" | "manual"
   >("idle");
-  const [location, setLocation] = useState(null);
+  const [location, setLocation] = useState<LocationObject | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState("");
   const [isManualSelectionVisible, setIsManualSelectionVisible] = useState(false);
   const [showFullscreenMap, setShowFullscreenMap] = useState(false);
-  const mapRef = useRef(null);
+  const mapRef = useRef<MapView | null>(null);
 
-  // If this is the first time loading the component, try to get location automatically
+  // If this is the first time loading the component, try to get location from storage
   useEffect(() => {
     const checkSavedLocation = async () => {
       try {
         const locationData = await AsyncStorage.getItem("@user_location");
         
         if (locationData) {
-          const parsedLocation = JSON.parse(locationData);
+          const parsedLocation: StoredLocationData = JSON.parse(locationData);
           setLocation({
             coords: {
               latitude: parsedLocation.latitude,
               longitude: parsedLocation.longitude,
+              accuracy: null
             },
             timestamp: parsedLocation.timestamp,
           });
@@ -130,21 +162,25 @@ export const LocationPermissionScreen = () => {
     }
   };
 
-  const formatAddress = (address) => {
-    const parts = [];
-    if (address.street) parts.push(address.street);
-    if (address.city) parts.push(address.city);
-    if (address.region) parts.push(address.region);
-    if (address.country) parts.push(address.country);
-    
-    return parts.join(", ");
-  };
+  const formatAddress = (address: AddressObject | Location.LocationGeocodedAddress): string => {
+      const parts: string[] = [];
+      if (address.street || address.street === null) parts.push(address.street || "");
+      if (address.city) parts.push(address.city);
+      if (address.region) parts.push(address.region);
+      if (address.country) parts.push(address.country);
+      
+      return parts.join(", ");
+    };
 
   const openSettings = () => {
     if (Platform.OS === "ios") {
-      Linking.openURL("app-settings:");
+      Linking.openURL("app-settings:").catch(err => {
+        console.error("Failed to open settings", err);
+      });
     } else {
-      Linking.openSettings();
+      Linking.openSettings().catch(err => {
+        console.error("Failed to open settings", err);
+      });
     }
   };
 
@@ -181,6 +217,7 @@ export const LocationPermissionScreen = () => {
       // Mark onboarding as complete
       await AsyncStorage.setItem("@has_completed_onboarding", "true");
 
+      // Use a delay to show loading state briefly
       setTimeout(() => {
         setIsLoading(false);
         router.replace("/(tabs)");
@@ -195,7 +232,7 @@ export const LocationPermissionScreen = () => {
     setIsManualSelectionVisible(true);
   };
   
-  const handleSelectLocation = async (newLocation, address) => {
+  const handleSelectLocation = async (newLocation: LocationObject, address: string) => {
     // Save the selected location
     setLocation(newLocation);
     setSelectedAddress(address);

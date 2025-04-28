@@ -1,5 +1,4 @@
 // context/ThemeContext.tsx
-// context/ThemeContext.tsx
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useColorScheme, OpaqueColorValue } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -9,6 +8,10 @@ type ThemeType = "light" | "dark" | "system";
 
 // Theme color definitions
 interface ThemeColors {
+  textPlaceholder: ColorValue | undefined;
+  switchTrackOff: ColorValue | undefined;
+  switchThumb: ColorValue | undefined;
+  switchTrackOff: ColorValue | null | undefined;
   danger: string | OpaqueColorValue | undefined;
   background: string;
   card: string;
@@ -41,6 +44,9 @@ interface ThemeColors {
 
 // Create light and dark color themes
 const lightColors: ThemeColors = {
+  textPlaceholder: "#AAAAAA",
+  switchTrackOff: "#E0E0E0",
+  switchThumb: "#FFFFFF",
   background: "#FFFFFF",
   card: "#FFFFFF",
   surface: "#F8F8F8",
@@ -72,6 +78,9 @@ const lightColors: ThemeColors = {
 };
 
 const darkColors: ThemeColors = {
+  textPlaceholder: "#666666",
+  switchTrackOff: "#444444",
+  switchThumb: "#AAAAAA",
   background: "#121212",
   card: "#1E1E1E",
   surface: "#282828",

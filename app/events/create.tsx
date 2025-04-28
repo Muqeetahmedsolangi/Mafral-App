@@ -6,226 +6,295 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  Image,
   Platform,
   SafeAreaView,
   KeyboardAvoidingView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '@/context/ThemeContext';
 import { Button } from '@/components/ui/Button';
 import { MOCK_CATEGORIES } from '@/constants/MockData';
-import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import MapView, { Marker } from 'react-native-maps';
-import { Category } from '@/types/events';
+import { EventFormExtended, EventPromotion, PromoCode, SkipLineOption, Category } from '@/types/events';
+
+// Import all the component modules
+import ImageGalleryUploader from '@/components/events/ImageGalleryUploader';
+import LocationPicker from '@/components/events/LocationPicker';
+import TagInput from '@/components/events/TagInput';
+import PremiumFeaturesSection from '@/components/events/PremiumFeaturesSection';
+import PromoCodesManager from '@/components/events/PromoCodesManager';
+import EventSuccessScreen from '@/components/events/EventSuccessScreen';
 
 // Define types for the form state
 interface TicketType {
+  id: string;
   type: string;
-  price: string;
-  available: string;
+  price: number;
+  currency: string;
+  description?: string;
+  available: number;
+  sold: number;
 }
-
-interface LocationData {
-  latitude: number;
-  longitude: number;
-}
-
-interface EventForm {
-  title: string;
-  description: string;
-  coverImage: string | null;
-  startDate: Date;
-  endDate: Date;
-  category: Category | null;
-  location: LocationData | null;
-  locationAddress: string;
-  ticketTypes: TicketType[];
-}
-
-// Location Selection Modal Component
-interface LocationSelectionModalProps {
-  visible: boolean;
-  onClose: () => void;
-  colors: any;
-  onSelectLocation: (location: any, address: string) => void;
-  initialLocation: any | null;
-}
-
-// Simple placeholder for LocationSelectionModal
-// In a real app, you would create this as a separate component
-const LocationSelectionModal: React.FC<LocationSelectionModalProps> = ({ 
-  visible, 
-  onClose, 
-  colors, 
-  onSelectLocation, 
-  initialLocation 
-}) => {
-  // This is a placeholder. In a real app, implement a proper modal with map selection
-  if (!visible) return null;
-  
-  return (
-    <View style={[styles.modalContainer, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
-      <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-        <Text style={[styles.modalTitle, { color: colors.text }]}>Select Location</Text>
-        <Text style={{ color: colors.textSecondary, marginBottom: 20 }}>
-          This is a placeholder. In a real implementation, include a map for location selection.
-        </Text>
-        
-        {/* For testing purposes - simulate selecting a location */}
-        <Button 
-          title="Select Demo Location" 
-          onPress={() => onSelectLocation({
-            coords: {
-              latitude: 23.7783,
-              longitude: 90.3756,
-            }
-          }, "123 Main Street, Dhaka, Bangladesh")} 
-          variant="primary"
-          style={{ marginBottom: 10 }}
-        />
-        <Button 
-          title="Cancel" 
-          onPress={onClose} 
-          variant="outline"
-        />
-      </View>
-    </View>
-  );
-};
 
 export default function CreateEventScreen() {
   const { colors } = useTheme();
-  const [form, setForm] = useState<EventForm>({
+  
+  // Initialize with default values
+  const [form, setForm] = useState<EventFormExtended>({
     title: '',
     description: '',
-    coverImage: null,
-    startDate: new Date(),
-    endDate: new Date(Date.now() + 3600000), // 1 hour from now
-    category: null,
-    location: null,
-    locationAddress: '',
-    ticketTypes: [{ type: 'General Admission', price: '0', available: '100' }],
+    date: {
+      start: new Date().toISOString(),
+      end: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now
+    },
+    location: {
+      name: '',
+      address: '',
+      city: '',
+      country: '',
+    },
+    images: [],
+    promotion: {
+      isPromoted: false,
+      promotionLevel: 'basic',
+      startDate: null,
+      endDate: null,
+      budget: 100,
+    },
+    skipLineOption: {
+      enabled: false,
+      price: 20,
+      maxPurchases: 50,
+      description: 'Skip the entry line and get immediate access to the event.',
+    },
+    promoCodes: [],
+    tags: [],
   });
+  
+  // Form fields for additional properties
+  const [category, setCategory] = useState<Category | null>(null);
+  const [tickets, setTickets] = useState<TicketType[]>([
+    {
+      id: 'ticket-1',
+      type: 'General Admission',
+      price: 0,
+      currency: 'USD',
+      description: 'Standard entry to the event',
+      available: 100,
+      sold: 0,
+    }
+  ]);
   
   // UI states
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerMode, setDatePickerMode] = useState<'date' | 'time'>('date');
-  const [currentDateField, setCurrentDateField] = useState<'startDate' | 'endDate'>('startDate');
-  const [isLocationModalVisible, setIsLocationModalVisible] = useState(false);
+  const [currentDateField, setCurrentDateField] = useState<'start' | 'end'>('start');
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
-
-  const handleImagePick = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [16, 9],
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      setForm({
-        ...form,
-        coverImage: result.assets[0].uri,
-      });
-    }
-  };
+  const [mapCoordinates, setMapCoordinates] = useState<{latitude: number, longitude: number} | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessScreen, setShowSuccessScreen] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [createdEventId, setCreatedEventId] = useState<string | null>(null);
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
-    const currentDate = selectedDate || form[currentDateField];
     setShowDatePicker(Platform.OS === 'ios'); // Only iOS uses manual dismissal
     
     if (selectedDate) {
+      const updatedDate = { ...form.date };
+      
+      if (currentDateField === 'start') {
+        updatedDate.start = selectedDate.toISOString();
+      } else {
+        updatedDate.end = selectedDate.toISOString();
+      }
+      
       setForm({
         ...form,
-        [currentDateField]: currentDate,
+        date: updatedDate,
       });
     }
   };
 
-  const showDateTimePicker = (mode: 'date' | 'time', field: 'startDate' | 'endDate') => {
+  const showDateTimePicker = (mode: 'date' | 'time', field: 'start' | 'end') => {
     setShowDatePicker(true);
     setDatePickerMode(mode);
     setCurrentDateField(field);
   };
 
-  const handleLocationSelect = (newLocation: any, address: string) => {
+  const handleImageChange = (images: any[]) => {
+    setForm({
+      ...form,
+      images,
+    });
+  };
+
+  const handleLocationChange = (coordinates: { latitude: number; longitude: number }, address: string) => {
+    // Parse address to extract city, country, etc.
+    const addressParts = address.split(', ');
+    
+    setMapCoordinates(coordinates);
     setForm({
       ...form,
       location: {
-        latitude: newLocation.coords.latitude,
-        longitude: newLocation.coords.longitude,
-      },
-      locationAddress: address,
+        name: addressParts[0] || '',
+        address: address,
+        city: addressParts.length > 1 ? addressParts[1] : '',
+        country: addressParts.length > 2 ? addressParts[addressParts.length - 1] : '',
+      }
     });
-    setIsLocationModalVisible(false);
   };
 
-  const handleTicketChange = (index: number, field: keyof TicketType, value: string) => {
-    const updatedTickets = [...form.ticketTypes];
+  const handleTicketChange = (index: number, field: keyof TicketType, value: any) => {
+    const updatedTickets = [...tickets];
     updatedTickets[index] = {
       ...updatedTickets[index],
       [field]: value,
     };
-    setForm({
-      ...form,
-      ticketTypes: updatedTickets,
-    });
+    setTickets(updatedTickets);
   };
 
   const addTicketType = () => {
-    setForm({
-      ...form,
-      ticketTypes: [
-        ...form.ticketTypes,
-        { type: `Ticket ${form.ticketTypes.length + 1}`, price: '0', available: '50' },
-      ],
-    });
+    const newTicketId = `ticket-${tickets.length + 1}`;
+    setTickets([
+      ...tickets,
+      {
+        id: newTicketId,
+        type: `Ticket Type ${tickets.length + 1}`,
+        price: 0,
+        currency: 'USD',
+        description: '',
+        available: 50,
+        sold: 0,
+      },
+    ]);
   };
 
   const removeTicketType = (index: number) => {
-    if (form.ticketTypes.length <= 1) {
+    if (tickets.length <= 1) {
       Alert.alert('Cannot Remove', 'You need at least one ticket type');
       return;
     }
     
-    const updatedTickets = form.ticketTypes.filter((_, i) => i !== index);
+    const updatedTickets = tickets.filter((_, i) => i !== index);
+    setTickets(updatedTickets);
+  };
+
+  const handleTagsChange = (tags: string[]) => {
     setForm({
       ...form,
-      ticketTypes: updatedTickets,
+      tags,
     });
   };
 
-  const handleCreateEvent = () => {
-    // Validate form
-    if (!form.title || !form.description || !form.coverImage || !form.category || !form.location) {
-      Alert.alert('Missing Information', 'Please fill all required fields');
-      return;
-    }
-    
-    // In a real app, you would submit to an API
-    console.log('Creating event:', form);
-    
-    Alert.alert(
-      'Event Created',
-      'Your event has been successfully created!',
-      [
-        {
-          text: 'View Event',
-          onPress: () => router.push(`/events/123`),
-        },
-        {
-          text: 'Go to Events',
-          onPress: () => router.push('/events'),
-        },
-      ]
-    );
+  const handlePromotionChange = (promotion: EventPromotion) => {
+    setForm({
+      ...form,
+      promotion,
+    });
   };
 
-  const formatDate = (date: Date) => {
+  const handleSkipLineChange = (skipLineOption: SkipLineOption) => {
+    setForm({
+      ...form,
+      skipLineOption,
+    });
+  };
+
+  const handlePromoCodesChange = (promoCodes: PromoCode[]) => {
+    setForm({
+      ...form,
+      promoCodes,
+    });
+  };
+
+  const validateForm = () => {
+    if (!form.title.trim()) {
+      Alert.alert('Missing Information', 'Please enter an event title');
+      return false;
+    }
+    
+    if (!form.description.trim()) {
+      Alert.alert('Missing Information', 'Please enter an event description');
+      return false;
+    }
+    
+    if (form.images.length === 0) {
+      Alert.alert('Missing Information', 'Please add at least one event image');
+      return false;
+    }
+    
+    if (!category) {
+      Alert.alert('Missing Information', 'Please select a category');
+      return false;
+    }
+    
+    if (!form.location.address) {
+      Alert.alert('Missing Information', 'Please select a location');
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleCreateEvent = () => {
+    if (!validateForm()) return;
+    
+    // Combine all data for the complete event object
+    const eventData = {
+      ...form,
+      category,
+      tickets,
+      location: {
+        ...form.location,
+        coordinates: mapCoordinates || { latitude: 0, longitude: 0 },
+      },
+    };
+    
+    setIsSubmitting(true);
+    
+    // In a real app, you would submit to an API
+    // Here we simulate the API call with setTimeout
+    console.log('Creating event:', eventData);
+    
+    setTimeout(() => {
+      // Generate a random event ID
+      const newEventId = 'event-' + Math.floor(Math.random() * 10000);
+      setCreatedEventId(newEventId);
+      
+      // In a real app, you would store the created event data in AsyncStorage or API
+      // For demo purposes, we just generate an ID and show the success screen
+      
+      setIsSubmitting(false);
+      setShowSuccessScreen(true);
+    }, 1500);
+  };
+
+  const goToNextStep = () => {
+    if (currentStep < 4) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const goToPreviousStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleSuccessScreenClose = () => {
+    setShowSuccessScreen(false);
+    if (createdEventId) {
+      router.push(`/events/${createdEventId}`);
+    } else {
+      router.back();
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -233,12 +302,32 @@ export default function CreateEventScreen() {
     });
   };
 
-  const formatTime = (date: Date) => {
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
     return date.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
     });
   };
+
+  const stepIndicators = [
+    {
+      title: 'Basic Info',
+      sections: ['images', 'basic', 'category'],
+    },
+    {
+      title: 'Date & Location',
+      sections: ['datetime', 'location'],
+    },
+    {
+      title: 'Tickets',
+      sections: ['tickets'],
+    },
+    {
+      title: 'Extras',
+      sections: ['premium', 'promo'],
+    },
+  ];
 
   return (
     <>
@@ -256,335 +345,379 @@ export default function CreateEventScreen() {
             <View style={{ width: 24 }} />
           </View>
 
-          <ScrollView style={styles.content}>
-            {/* Cover Image */}
-            <TouchableOpacity
-              style={[
-                styles.coverImageContainer,
-                { backgroundColor: colors.surfaceVariant }
-              ]}
-              onPress={handleImagePick}
-            >
-              {form.coverImage ? (
-                <Image source={{ uri: form.coverImage }} style={styles.coverImage} />
-              ) : (
-                <View style={styles.coverImagePlaceholder}>
-                  <Feather name="image" size={40} color={colors.textSecondary} />
-                  <Text style={[styles.coverImageText, { color: colors.textSecondary }]}>
-                    Upload cover image
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-
-            {/* Basic Info */}
-            <View style={styles.formSection}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Basic Information</Text>
-              
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Event Title</Text>
-                <TextInput
-                  style={[styles.textInput, { backgroundColor: colors.surfaceVariant, color: colors.text }]}
-                  placeholder="Enter event title"
-                  placeholderTextColor={colors.textSecondary}
-                  value={form.title}
-                  onChangeText={(text) => setForm({ ...form, title: text })}
-                />
-              </View>
-              
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Description</Text>
-                <TextInput
-                  style={[
-                    styles.textInput, 
-                    styles.textArea,
-                    { backgroundColor: colors.surfaceVariant, color: colors.text }
-                  ]}
-                  placeholder="Describe your event"
-                  placeholderTextColor={colors.textSecondary}
-                  multiline
-                  numberOfLines={5}
-                  value={form.description}
-                  onChangeText={(text) => setForm({ ...form, description: text })}
-                />
-              </View>
-            </View>
-
-            {/* Category */}
-            <View style={styles.formSection}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Category</Text>
-              
-              <TouchableOpacity
-                style={[styles.pickerButton, { backgroundColor: colors.surfaceVariant }]}
-                onPress={() => setShowCategoryPicker(!showCategoryPicker)}
+          {/* Step Indicators */}
+          <View style={styles.stepIndicatorContainer}>
+            <View style={styles.stepIndicatorLine} />
+            {stepIndicators.map((step, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.stepDot,
+                  {
+                    backgroundColor: currentStep > index ? colors.primary : currentStep === index + 1 ? colors.primary : colors.border,
+                    borderColor: currentStep === index + 1 ? colors.primary : 'transparent',
+                  },
+                ]}
               >
-                {form.category ? (
-                  <View style={styles.selectedCategory}>
-                    <View 
-                      style={[
-                        styles.categoryIcon, 
-                        { backgroundColor: form.category.color || colors.primary }
-                      ]}
-                    >
-                      <Feather name={form.category.icon as any} size={16} color="#FFFFFF" />
-                    </View>
-                    <Text style={[styles.selectedCategoryText, { color: colors.text }]}>
-                      {form.category.name}
-                    </Text>
-                  </View>
-                ) : (
-                  <Text style={[styles.pickerButtonText, { color: colors.textSecondary }]}>
-                    Select a category
-                  </Text>
-                )}
-                <Feather 
-                  name={showCategoryPicker ? "chevron-up" : "chevron-down"} 
-                  size={20} 
-                  color={colors.textSecondary} 
-                />
-              </TouchableOpacity>
-              
-              {showCategoryPicker && (
-                <View style={[styles.categoryList, { backgroundColor: colors.card }]}>
-                  {MOCK_CATEGORIES.map((category) => (
-                    <TouchableOpacity
-                      key={category.id}
-                      style={styles.categoryOption}
-                      onPress={() => {
-                        setForm({ ...form, category });
-                        setShowCategoryPicker(false);
-                      }}
-                    >
-                      <View 
-                        style={[styles.categoryIcon, { backgroundColor: category.color }]}
-                      >
-                        <Feather name={category.icon as any} size={16} color="#FFFFFF" />
-                      </View>
-                      <Text style={[styles.categoryOptionText, { color: colors.text }]}>
-                        {category.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
-
-            {/* Date & Time */}
-            <View style={styles.formSection}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Date & Time</Text>
-              
-              <View style={styles.dateTimeContainer}>
-                <View style={styles.dateTimeColumn}>
-                  <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Start Date</Text>
-                  <TouchableOpacity
-                    style={[styles.dateTimeButton, { backgroundColor: colors.surfaceVariant }]}
-                    onPress={() => showDateTimePicker('date', 'startDate')}
-                  >
-                    <Feather name="calendar" size={16} color={colors.textSecondary} />
-                    <Text style={[styles.dateTimeText, { color: colors.text }]}>
-                      {formatDate(form.startDate)}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-                
-                <View style={styles.dateTimeColumn}>
-                  <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Start Time</Text>
-                  <TouchableOpacity
-                    style={[styles.dateTimeButton, { backgroundColor: colors.surfaceVariant }]}
-                    onPress={() => showDateTimePicker('time', 'startDate')}
-                  >
-                    <Feather name="clock" size={16} color={colors.textSecondary} />
-                    <Text style={[styles.dateTimeText, { color: colors.text }]}>
-                      {formatTime(form.startDate)}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                <Text style={[
+                  styles.stepNumber,
+                  { color: currentStep > index || currentStep === index + 1 ? '#FFF' : colors.textSecondary }
+                ]}>
+                  {index + 1}
+                </Text>
               </View>
-              
-              <View style={styles.dateTimeContainer}>
-                <View style={styles.dateTimeColumn}>
-                  <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>End Date</Text>
-                  <TouchableOpacity
-                    style={[styles.dateTimeButton, { backgroundColor: colors.surfaceVariant }]}
-                    onPress={() => showDateTimePicker('date', 'endDate')}
-                  >
-                    <Feather name="calendar" size={16} color={colors.textSecondary} />
-                    <Text style={[styles.dateTimeText, { color: colors.text }]}>
-                      {formatDate(form.endDate)}
-                    </Text>
-                  </TouchableOpacity>
+            ))}
+          </View>
+
+          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+            {/* Step 1: Basic Information */}
+            {currentStep === 1 && (
+              <>
+                {/* Event Images */}
+                <View style={styles.formSection}>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Event Images</Text>
+                  <ImageGalleryUploader 
+                    images={form.images}
+                    onImagesChange={handleImageChange}
+                    maxImages={5}
+                  />
                 </View>
-                
-                <View style={styles.dateTimeColumn}>
-                  <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>End Time</Text>
-                  <TouchableOpacity
-                    style={[styles.dateTimeButton, { backgroundColor: colors.surfaceVariant }]}
-                    onPress={() => showDateTimePicker('time', 'endDate')}
-                  >
-                    <Feather name="clock" size={16} color={colors.textSecondary} />
-                    <Text style={[styles.dateTimeText, { color: colors.text }]}>
-                      {formatTime(form.endDate)}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
 
-              {showDatePicker && (
-                <DateTimePicker
-                  value={form[currentDateField]}
-                  mode={datePickerMode}
-                  is24Hour={false}
-                  display="default"
-                  onChange={handleDateChange}
-                />
-              )}
-            </View>
-
-            {/* Location */}
-            <View style={styles.formSection}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Location</Text>
-              
-              <TouchableOpacity
-                style={[styles.locationButton, { backgroundColor: colors.surfaceVariant }]}
-                onPress={() => setIsLocationModalVisible(true)}
-              >
-                <Feather name="map-pin" size={20} color={colors.textSecondary} />
-                
-                {form.locationAddress ? (
-                  <Text style={[styles.locationText, { color: colors.text }]} numberOfLines={2}>
-                    {form.locationAddress}
-                  </Text>
-                ) : (
-                  <Text style={[styles.locationPlaceholder, { color: colors.textSecondary }]}>
-                    Select event location
-                  </Text>
-                )}
-              </TouchableOpacity>
-
-              {form.location && (
-                <View style={styles.locationPreviewContainer}>
-                  <View style={styles.locationPreviewMap}>
-                    <MapView
-                      style={styles.locationMapPreview}
-                      initialRegion={{
-                        latitude: form.location.latitude,
-                        longitude: form.location.longitude,
-                        latitudeDelta: 0.01,
-                        longitudeDelta: 0.01,
-                      }}
-                      scrollEnabled={false}
-                      zoomEnabled={false}
-                    >
-                      <Marker
-                        coordinate={{
-                          latitude: form.location.latitude,
-                          longitude: form.location.longitude,
-                        }}
-                        pinColor={colors.primary}
-                      />
-                    </MapView>
-                  </View>
-                </View>
-              )}
-            </View>
-
-            {/* Tickets */}
-            <View style={styles.formSection}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Tickets</Text>
-                <TouchableOpacity
-                  style={[styles.addButton, { backgroundColor: colors.primary }]}
-                  onPress={addTicketType}
-                >
-                  <Feather name="plus" size={16} color="#FFFFFF" />
-                  <Text style={styles.addButtonText}>Add Ticket</Text>
-                </TouchableOpacity>
-              </View>
-              
-              {form.ticketTypes.map((ticket, index) => (
-                <View key={index} style={[styles.ticketCard, { backgroundColor: colors.card }]}>
-                  <View style={styles.ticketCardHeader}>
-                    <Text style={[styles.ticketCardTitle, { color: colors.text }]}>
-                      Ticket Type {index + 1}
-                    </Text>
-                    <TouchableOpacity onPress={() => removeTicketType(index)}>
-                      <Feather name="trash-2" size={20} color={colors.danger} />
-                    </TouchableOpacity>
-                  </View>
+                {/* Basic Info */}
+                <View style={styles.formSection}>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Basic Information</Text>
                   
                   <View style={styles.inputGroup}>
-                    <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Name</Text>
+                    <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Event Title</Text>
                     <TextInput
                       style={[styles.textInput, { backgroundColor: colors.surfaceVariant, color: colors.text }]}
-                      placeholder="Ticket name"
+                      placeholder="Enter event title"
                       placeholderTextColor={colors.textSecondary}
-                      value={ticket.type}
-                      onChangeText={(text) => handleTicketChange(index, 'type', text)}
+                      value={form.title}
+                      onChangeText={(text) => setForm({ ...form, title: text })}
                     />
                   </View>
                   
-                  <View style={styles.ticketDetailsRow}>
-                    <View style={styles.ticketDetailInput}>
-                      <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Price</Text>
-                      <View style={[styles.priceInputContainer, { backgroundColor: colors.surfaceVariant }]}>
-                        <Text style={[styles.currencySymbol, { color: colors.text }]}>$</Text>
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Description</Text>
+                    <TextInput
+                      style={[
+                        styles.textInput, 
+                        styles.textArea,
+                        { backgroundColor: colors.surfaceVariant, color: colors.text }
+                      ]}
+                      placeholder="Describe your event"
+                      placeholderTextColor={colors.textSecondary}
+                      multiline
+                      numberOfLines={5}
+                      value={form.description}
+                      onChangeText={(text) => setForm({ ...form, description: text })}
+                    />
+                  </View>
+                  
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Tags</Text>
+                    <TagInput
+                      tags={form.tags}
+                      onTagsChange={handleTagsChange}
+                      maxTags={10}
+                      placeholder="Add tags (press space or comma to add)"
+                    />
+                  </View>
+                </View>
+
+                {/* Category */}
+                <View style={styles.formSection}>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Category</Text>
+                  
+                  <TouchableOpacity
+                    style={[styles.pickerButton, { backgroundColor: colors.surfaceVariant }]}
+                    onPress={() => setShowCategoryPicker(!showCategoryPicker)}
+                  >
+                    {category ? (
+                      <View style={styles.selectedCategory}>
+                        <View 
+                          style={[
+                            styles.categoryIcon, 
+                            { backgroundColor: category.color || colors.primary }
+                          ]}
+                        >
+                          <Feather name={category.icon as any} size={16} color="#FFFFFF" />
+                        </View>
+                        <Text style={[styles.selectedCategoryText, { color: colors.text }]}>
+                          {category.name}
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text style={[styles.pickerButtonText, { color: colors.textSecondary }]}>
+                        Select a category
+                      </Text>
+                    )}
+                    <Feather 
+                      name={showCategoryPicker ? "chevron-up" : "chevron-down"} 
+                      size={20} 
+                      color={colors.textSecondary} 
+                    />
+                  </TouchableOpacity>
+                  
+                  {showCategoryPicker && (
+                    <View style={[styles.categoryList, { backgroundColor: colors.card }]}>
+                      {MOCK_CATEGORIES.map((cat) => (
+                        <TouchableOpacity
+                          key={cat.id}
+                          style={styles.categoryOption}
+                          onPress={() => {
+                            setCategory(cat);
+                            setShowCategoryPicker(false);
+                          }}
+                        >
+                          <View 
+                            style={[styles.categoryIcon, { backgroundColor: cat.color }]}
+                          >
+                            <Feather name={cat.icon as any} size={16} color="#FFFFFF" />
+                          </View>
+                          <Text style={[styles.categoryOptionText, { color: colors.text }]}>
+                            {cat.name}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              </>
+            )}
+
+            {/* Step 2: Date & Location */}
+            {currentStep === 2 && (
+              <>
+                {/* Date & Time */}
+                <View style={styles.formSection}>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Date & Time</Text>
+                  
+                  <View style={styles.dateTimeContainer}>
+                    <View style={styles.dateTimeColumn}>
+                      <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Start Date</Text>
+                      <TouchableOpacity
+                        style={[styles.dateTimeButton, { backgroundColor: colors.surfaceVariant }]}
+                        onPress={() => showDateTimePicker('date', 'start')}
+                      >
+                        <Feather name="calendar" size={16} color={colors.textSecondary} />
+                        <Text style={[styles.dateTimeText, { color: colors.text }]}>
+                          {formatDate(form.date.start)}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                    
+                    <View style={styles.dateTimeColumn}>
+                      <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Start Time</Text>
+                      <TouchableOpacity
+                        style={[styles.dateTimeButton, { backgroundColor: colors.surfaceVariant }]}
+                        onPress={() => showDateTimePicker('time', 'start')}
+                      >
+                        <Feather name="clock" size={16} color={colors.textSecondary} />
+                        <Text style={[styles.dateTimeText, { color: colors.text }]}>
+                          {formatTime(form.date.start)}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.dateTimeContainer}>
+                    <View style={styles.dateTimeColumn}>
+                      <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>End Date</Text>
+                      <TouchableOpacity
+                        style={[styles.dateTimeButton, { backgroundColor: colors.surfaceVariant }]}
+                        onPress={() => showDateTimePicker('date', 'end')}
+                      >
+                        <Feather name="calendar" size={16} color={colors.textSecondary} />
+                        <Text style={[styles.dateTimeText, { color: colors.text }]}>
+                          {formatDate(form.date.end)}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                    
+                    <View style={styles.dateTimeColumn}>
+                      <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>End Time</Text>
+                      <TouchableOpacity
+                        style={[styles.dateTimeButton, { backgroundColor: colors.surfaceVariant }]}
+                        onPress={() => showDateTimePicker('time', 'end')}
+                      >
+                        <Feather name="clock" size={16} color={colors.textSecondary} />
+                        <Text style={[styles.dateTimeText, { color: colors.text }]}>
+                          {formatTime(form.date.end)}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={new Date(currentDateField === 'start' ? form.date.start : form.date.end)}
+                      mode={datePickerMode}
+                      is24Hour={false}
+                      display="default"
+                      onChange={handleDateChange}
+                    />
+                  )}
+                </View>
+
+                {/* Location */}
+                <View style={styles.formSection}>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Location</Text>
+                  <LocationPicker 
+                    location={mapCoordinates}
+                    address={form.location.address}
+                    onLocationChange={handleLocationChange}
+                  />
+                </View>
+              </>
+            )}
+
+            {/* Step 3: Tickets */}
+            {currentStep === 3 && (
+              <View style={styles.formSection}>
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Tickets</Text>
+                  <TouchableOpacity
+                    style={[styles.addButton, { backgroundColor: colors.primary }]}
+                    onPress={addTicketType}
+                  >
+                    <Feather name="plus" size={16} color="#FFFFFF" />
+                    <Text style={styles.addButtonText}>Add Ticket</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                {tickets.map((ticket, index) => (
+                  <View key={ticket.id} style={[styles.ticketCard, { backgroundColor: colors.card }]}>
+                    <View style={styles.ticketCardHeader}>
+                      <Text style={[styles.ticketCardTitle, { color: colors.text }]}>
+                        Ticket Type {index + 1}
+                      </Text>
+                      <TouchableOpacity onPress={() => removeTicketType(index)}>
+                        <Feather name="trash-2" size={20} color={colors.danger || "#FF6B6B"} />
+                      </TouchableOpacity>
+                    </View>
+                    
+                    <View style={styles.inputGroup}>
+                      <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Name</Text>
+                      <TextInput
+                        style={[styles.textInput, { backgroundColor: colors.surfaceVariant, color: colors.text }]}
+                        placeholder="Ticket name"
+                        placeholderTextColor={colors.textSecondary}
+                        value={ticket.type}
+                        onChangeText={(text) => handleTicketChange(index, 'type', text)}
+                      />
+                    </View>
+                    
+                    <View style={styles.inputGroup}>
+                      <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Description (optional)</Text>
+                      <TextInput
+                        style={[styles.textInput, { backgroundColor: colors.surfaceVariant, color: colors.text }]}
+                        placeholder="Ticket description"
+                        placeholderTextColor={colors.textSecondary}
+                        value={ticket.description || ''}
+                        onChangeText={(text) => handleTicketChange(index, 'description', text)}
+                      />
+                    </View>
+                    
+                    <View style={styles.ticketDetailsRow}>
+                      <View style={styles.ticketDetailInput}>
+                        <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Price</Text>
+                        <View style={[styles.priceInputContainer, { backgroundColor: colors.surfaceVariant }]}>
+                          <Text style={[styles.currencySymbol, { color: colors.text }]}>$</Text>
+                          <TextInput
+                            style={[styles.priceInput, { color: colors.text }]}
+                            placeholder="0"
+                            placeholderTextColor={colors.textSecondary}
+                            keyboardType="numeric"
+                            value={ticket.price.toString()}
+                            onChangeText={(text) => handleTicketChange(index, 'price', text ? parseFloat(text) : 0)}
+                          />
+                        </View>
+                      </View>
+                      
+                      <View style={styles.ticketDetailInput}>
+                        <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Quantity</Text>
                         <TextInput
-                          style={[styles.priceInput, { color: colors.text }]}
-                          placeholder="0"
+                          style={[styles.textInput, { backgroundColor: colors.surfaceVariant, color: colors.text }]}
+                          placeholder="100"
                           placeholderTextColor={colors.textSecondary}
                           keyboardType="numeric"
-                          value={ticket.price}
-                          onChangeText={(text) => handleTicketChange(index, 'price', text)}
+                          value={ticket.available.toString()}
+                          onChangeText={(text) => handleTicketChange(index, 'available', text ? parseInt(text) : 0)}
                         />
                       </View>
                     </View>
-                    
-                    <View style={styles.ticketDetailInput}>
-                      <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Quantity</Text>
-                      <TextInput
-                        style={[styles.textInput, { backgroundColor: colors.surfaceVariant, color: colors.text }]}
-                        placeholder="100"
-                        placeholderTextColor={colors.textSecondary}
-                        keyboardType="numeric"
-                        value={ticket.available}
-                        onChangeText={(text) => handleTicketChange(index, 'available', text)}
-                      />
-                    </View>
                   </View>
-                </View>
-              ))}
-            </View>
+                ))}
+              </View>
+            )}
+
+            {/* Step 4: Premium Features & Promo Codes */}
+            {currentStep === 4 && (
+              <>
+                {/* Premium Features */}
+                <PremiumFeaturesSection 
+                  promotion={form.promotion}
+                  skipLineOption={form.skipLineOption}
+                  onPromotionChange={handlePromotionChange}
+                  onSkipLineOptionChange={handleSkipLineChange}
+                />
+
+                {/* Promo Codes */}
+                <PromoCodesManager
+                  promoCodes={form.promoCodes}
+                  onPromoCodesChange={handlePromoCodesChange}
+                />
+              </>
+            )}
 
             <View style={{ height: 100 }} />
           </ScrollView>
 
-          {/* Create Button */}
+          {/* Navigation Buttons */}
           <View style={[styles.bottomBar, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
-            <Button
-              title="Create Event"
-              variant="primary"
-              size="large"
-              onPress={handleCreateEvent}
-              style={{ flex: 1 }}
-            />
+            {currentStep > 1 && (
+              <Button
+                title="Previous"
+                variant="secondary"
+                size="large"
+                onPress={goToPreviousStep}
+                style={{ flex: 1, marginRight: 8 }}
+              />
+            )}
+            
+            {currentStep < 4 ? (
+              <Button
+                title="Next"
+                variant="primary"
+                size="large"
+                onPress={goToNextStep}
+                style={{ flex: currentStep > 1 ? 1 : 2 }}
+              />
+            ) : (
+              <Button
+                title={isSubmitting ? "Creating..." : "Create Event"}
+                variant="primary"
+                size="large"
+                onPress={handleCreateEvent}
+                style={{ flex: 1 }}
+                disabled={isSubmitting}
+                loading={isSubmitting}
+              />
+            )}
           </View>
-
-          {/* Location Selection Modal */}
-          <LocationSelectionModal
-            visible={isLocationModalVisible}
-            onClose={() => setIsLocationModalVisible(false)}
-            colors={colors}
-            onSelectLocation={handleLocationSelect}
-            initialLocation={form.location ? {
-              coords: {
-                latitude: form.location.latitude,
-                longitude: form.location.longitude,
-              },
-              timestamp: Date.now(),
-            } : null}
-          />
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      {/* Success Screen Component */}
+      <EventSuccessScreen
+        visible={showSuccessScreen}
+        eventId={createdEventId}
+        onClose={handleSuccessScreenClose}
+        message="It takes less than 24hrs to display events with MAFRAL"
+        showViewEventButton={true}
+      />
     </>
   );
 }
@@ -605,29 +738,38 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
+  // Step Indicators
+  stepIndicatorContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 40,
+    paddingVertical: 16,
+    position: 'relative',
+  },
+  stepIndicatorLine: {
+    position: 'absolute',
+    top: '50%',
+    left: 50,
+    right: 50,
+    height: 2,
+    backgroundColor: '#ddd',
+  },
+  stepDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+    borderWidth: 3,
+  },
+  stepNumber: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
   content: {
     flex: 1,
     padding: 16,
-  },
-  coverImageContainer: {
-    width: '100%',
-    height: 200,
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 20,
-  },
-  coverImage: {
-    width: '100%',
-    height: '100%',
-  },
-  coverImagePlaceholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  coverImageText: {
-    marginTop: 12,
-    fontSize: 16,
   },
   formSection: {
     marginBottom: 24,
@@ -733,34 +875,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
   },
-  locationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 48,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  locationText: {
-    flex: 1,
-    marginLeft: 12,
-    fontSize: 16,
-  },
-  locationPlaceholder: {
-    marginLeft: 12,
-    fontSize: 16,
-  },
-  locationPreviewContainer: {
-    marginTop: 12,
-  },
-  locationPreviewMap: {
-    height: 150,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  locationMapPreview: {
-    flex: 1,
-  },
   ticketCard: {
     borderRadius: 16,
     padding: 16,
@@ -802,25 +916,6 @@ const styles = StyleSheet.create({
   bottomBar: {
     padding: 16,
     borderTopWidth: 1,
-  },
-  modalContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  modalContent: {
-    width: '80%',
-    borderRadius: 16,
-    padding: 20,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
+    flexDirection: 'row',
   },
 });

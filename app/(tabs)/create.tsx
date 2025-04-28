@@ -1,12 +1,12 @@
 // app/(tabs)/create.tsx
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useTheme } from '@/context/ThemeContext';
 import { H3, Body1, Body2 } from '@/components/ui/Typography';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { globalStyles } from '@/app/styles/globalStyles';
+import { router } from 'expo-router';
 
 interface CreateOptionProps {
   icon: React.ReactNode;
@@ -34,6 +34,36 @@ const CreateOption = ({ icon, title, onPress }: CreateOptionProps) => {
 export default function CreateScreen() {
   const { colors } = useTheme();
   
+  const navigateToCreatePost = () => {
+    // Navigate to create post flow
+    router.push('/create/post');
+  };
+  
+  const navigateToCreateReel = () => {
+    // Navigate to create reel flow
+    router.push('/create/reel');
+  };
+  
+  const navigateToCreateStory = () => {
+    // Navigate to create story flow
+    router.push('/create/story');
+  };
+  
+  const navigateToCreateMessage = () => {
+    // Navigate to create message flow
+    router.push('/create/message');
+  };
+  
+  const navigateToCreateEvent = () => {
+    // Navigate to create event flow
+    router.push('/events/create');
+  };
+  
+  const navigateToCreateRestaurant = () => {
+    // Navigate to create restaurant flow
+    router.push('/restaurants/create');
+  };
+  
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
@@ -44,7 +74,7 @@ export default function CreateScreen() {
         <CreateOption
           icon={<Feather name="image" size={24} color={colors.text} />}
           title="Post"
-          onPress={() => {}}
+          onPress={navigateToCreatePost}
         />
         
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -52,7 +82,7 @@ export default function CreateScreen() {
         <CreateOption
           icon={<MaterialCommunityIcons name="movie-outline" size={24} color={colors.text} />}
           title="Reel"
-          onPress={() => {}}
+          onPress={navigateToCreateReel}
         />
         
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -60,7 +90,7 @@ export default function CreateScreen() {
         <CreateOption
           icon={<Feather name="camera" size={24} color={colors.text} />}
           title="Story"
-          onPress={() => {}}
+          onPress={navigateToCreateStory}
         />
         
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -68,7 +98,25 @@ export default function CreateScreen() {
         <CreateOption
           icon={<Feather name="message-circle" size={24} color={colors.text} />}
           title="Message"
-          onPress={() => {}}
+          onPress={navigateToCreateMessage}
+        />
+      </Card>
+      
+      <H3 style={styles.businessHeader}>Business</H3>
+      
+      <Card variant="filled" style={styles.optionsCard}>
+        <CreateOption
+          icon={<Feather name="calendar" size={24} color={colors.text} />}
+          title="Event"
+          onPress={navigateToCreateEvent}
+        />
+        
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+        
+        <CreateOption
+          icon={<FontAwesome5 name="utensils" size={22} color={colors.text} />}
+          title="Restaurant"
+          onPress={navigateToCreateRestaurant}
         />
       </Card>
       
@@ -78,18 +126,18 @@ export default function CreateScreen() {
         size="medium"
         icon={<Feather name="plus" size={18} color="#FFF" style={{ marginRight: 8 }} />}
         iconPosition="left"
-        onPress={() => {}}
+        onPress={navigateToCreatePost}
         style={styles.createButton}
       />
       
       <Card style={styles.tipsCard}>
         <View style={styles.tipsHeader}>
           <Feather name="info" size={20} color={colors.info} />
-          <Body1 style={[styles.tipsTitle, { color: colors.info }]}>Content Tips</Body1>
+          <Body1 style={[styles.tipsTitle, { color: colors.info }]}>Business Tips</Body1>
         </View>
-        <Body2 style={styles.tipText}>Use high-quality images and videos for better engagement.</Body2>
-        <Body2 style={styles.tipText}>Write compelling captions to connect with your audience.</Body2>
-        <Body2 style={styles.tipText}>Use relevant hashtags to increase your content's visibility.</Body2>
+        <Body2 style={styles.tipText}>Create a complete profile with all your business details.</Body2>
+        <Body2 style={styles.tipText}>Showcase your best products with professional images.</Body2>
+        <Body2 style={styles.tipText}>Regularly update your listings to keep customers informed.</Body2>
       </Card>
     </View>
   );
@@ -103,6 +151,10 @@ const styles = StyleSheet.create({
   header: {
     marginTop: 50,
     marginBottom: 24,
+  },
+  businessHeader: {
+    marginTop: 24,
+    marginBottom: 16,
   },
   optionsCard: {
     marginBottom: 24,

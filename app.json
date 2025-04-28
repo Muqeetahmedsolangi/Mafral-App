@@ -11,9 +11,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true
     },
@@ -33,9 +31,21 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow Mafral to use your location."
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location for finding nearby events and content.",
+          "locationAlwaysPermission": "Allow $(PRODUCT_NAME) to use your location for finding nearby events and content.",
+          "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location for finding nearby events and content.",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false
         }
       ]
-    ]
+    ],
+    "ios": {
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to find nearby events and show relevant content."
+      }
+    },
+    "android": {
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+    }
   }
 }

@@ -13,13 +13,13 @@ export const SimpleBarcodeView = ({ value, width, height }: SimpleBarcodeProps) 
   
   return (
     <View style={[styles.container, { width, height }]}>
-      {bars.map((width, index) => (
+      {bars.map((barWidth, index) => (
         <View
           key={index}
           style={[
             styles.bar,
             {
-              width: width,
+              width: barWidth,
               height: height * 0.8,
               marginHorizontal: 1,
             },

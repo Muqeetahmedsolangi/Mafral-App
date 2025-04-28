@@ -1,4 +1,5 @@
 export interface Event {
+  startDate: string;
   id: string;
   title: string;
   description: string;
@@ -9,6 +10,8 @@ export interface Event {
     end: string; // ISO string
   };
   location: {
+    longitude: number;
+    latitude: number;
     id?: string;
     name: string;
     address: string;
@@ -54,6 +57,44 @@ export interface Event {
   updatedAt?: string; // ISO string
 }
 
+// Add the EventWithRelations interface that includes all potential data from created events
+export interface EventWithRelations extends Event {
+  // Additional fields that might be present in created events
+  imageUrl?: string;
+  images?: EventImage[];
+  endDate?: string;
+  ticketTypes?: {
+    id: string;
+    name: string;
+    price: number;
+    currency: string;
+    description?: string;
+    availableCount: number;
+    soldCount: number;
+  }[];
+  attendeeCount?: number;
+  promotion?: EventPromotion;
+  skipLineOption?: SkipLineOption;
+  promoCodes?: PromoCode[];
+  // Any other fields needed to ensure compatibility with both mock and created events
+
+  // Add explicit location structure
+  location: {
+    id?: string;
+    name: string;
+    address: string;
+    city: string;
+    state?: string;
+    country: string;
+    coordinates?: {
+      latitude: number;
+      longitude: number;
+    };
+    latitude?: number;
+    longitude?: number;
+  };
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -69,4 +110,61 @@ export interface Ticket {
   description?: string;
   available: number;
   sold: number;
+}
+
+export interface EventPromotion {
+  isPromoted: boolean;
+  promotionLevel: "basic" | "featured" | "premium";
+  startDate: Date | null;
+  endDate: Date | null;
+  budget?: number;
+  targetAudience?: string[];
+}
+
+export interface SkipLineOption {
+  enabled: boolean;
+  price: number;
+  maxPurchases: number;
+  description: string;
+}
+
+export interface PromoCode {
+  code: string;
+  discountType: "percentage" | "fixed";
+  discountValue: number;
+  maxUses: number;
+  usedCount: number;
+  validUntil: Date;
+  minimumPurchase?: number;
+  isActive: boolean;
+}
+
+export interface EventImage {
+  id: string;
+  uri: string;
+  isCover?: boolean;
+}
+
+// Define or import EventForm before using it
+export interface EventForm {
+  title: string;
+  description: string;
+  date: {
+    start: string; // ISO string
+    end: string; // ISO string
+  };
+  location: {
+    name: string;
+    address: string;
+    city: string;
+    country: string;
+  };
+}
+
+export interface EventFormExtended extends EventForm {
+  images: EventImage[];
+  promotion: EventPromotion;
+  skipLineOption: SkipLineOption;
+  promoCodes: PromoCode[];
+  tags: string[];
 }

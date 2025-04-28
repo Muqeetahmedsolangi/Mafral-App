@@ -21,11 +21,19 @@ import { getTicketById } from '@/constants/MockData';
 import { format } from 'date-fns';
 import { LinearGradient } from 'expo-linear-gradient';
 import ViewShot from 'react-native-view-shot';
-import * as MediaLibrary from 'expo-media-library';
-import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
-import Barcode from 'react-native-barcode-builder';
 import { SimpleBarcodeView } from '@/components/SimpleBarcodeView';
+
+// Platform-specific imports - no static imports for native-only modules
+let MediaLibrary;
+let FileSystem;
+let Sharing;
+
+if (Platform.OS !== 'web') {
+  // Import only on native platforms
+  MediaLibrary = require('expo-media-library');
+  FileSystem = require('expo-file-system');
+  Sharing = require('expo-sharing');
+}
 
 const { width } = Dimensions.get('window');
 const TICKET_WIDTH = width * 0.85;
@@ -65,11 +73,14 @@ export default function TicketViewScreen() {
 
   const handleDownloadPress = async () => {
     if (Platform.OS === 'web') {
-      alert('Download is not available on web');
+      alert('Downloading tickets is not supported on web. You can take a screenshot instead.');
       return;
     }
 
     try {
+      // Dynamic import for native platforms only
+      const MediaLibrary = require('expo-media-library');
+      
       // Request permissions first (for Android)
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {

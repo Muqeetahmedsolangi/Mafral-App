@@ -1,79 +1,64 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { format, parseISO } from 'date-fns';
 import { router } from 'expo-router';
 import { Event } from '@/types/events';
 
 interface EventCardProps {
   event: Event;
-  onPress?: () => void;
   colors: any;
-  style?: any;
 }
 
-const EventCard: React.FC<EventCardProps> = ({ event, onPress, colors, style }) => {
+const EventCard: React.FC<EventCardProps> = ({ event, colors }) => {
   const handlePress = () => {
-    if (onPress) {
-      onPress();
-    } else {
-      router.push(`/events/${event.id}`);
-    }
+    router.push(`/events/${event.id}`);
   };
 
   const startDate = parseISO(event.date.start);
   const formattedDate = format(startDate, 'MMM d');
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.container, 
-        { backgroundColor: colors.card },
-        style
-      ]}
+    <TouchableOpacity 
+      style={[styles.container, { backgroundColor: colors.surfaceVariant }]} 
       onPress={handlePress}
-      activeOpacity={0.9}
+      activeOpacity={0.8}
     >
+      {/* Event Image */}
       <Image source={{ uri: event.coverImage }} style={styles.image} />
-      <LinearGradient
-        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.7)']}
-        style={styles.gradient}
-      />
       
-      <View style={styles.dateTag}>
-        <Text style={styles.dateText}>{formattedDate}</Text>
+      {/* Category Badge */}
+      <View 
+        style={[styles.categoryBadge, { backgroundColor: event.category.color + '30' }]}
+      >
+        <Text style={[styles.categoryText, { color: event.category.color }]}>
+          {event.category.name}
+        </Text>
       </View>
       
-      <View style={styles.content}>
+      {/* Event Details */}
+      <View style={styles.detailsContainer}>
         <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
           {event.title}
         </Text>
         
-        <View style={styles.details}>
-          <View style={styles.detailRow}>
-            <Feather name="map-pin" size={12} color={colors.textSecondary} />
-            <Text style={[styles.detailText, { color: colors.textSecondary }]} numberOfLines={1}>
-              {event.location.name}
+        <View style={styles.metaContainer}>
+          <View style={styles.metaItem}>
+            <Feather name="calendar" size={12} color={colors.textSecondary} />
+            <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+              {formattedDate}
             </Text>
           </View>
           
-          <View style={styles.detailRow}>
-            <Feather name="users" size={12} color={colors.textSecondary} />
-            <Text style={[styles.detailText, { color: colors.textSecondary }]}>
-              {event.attendees} attending
+          <View style={styles.metaItem}>
+            <Feather name="map-pin" size={12} color={colors.textSecondary} />
+            <Text 
+              style={[styles.metaText, { color: colors.textSecondary }]} 
+              numberOfLines={1}
+            >
+              {event.location.city}
             </Text>
           </View>
-        </View>
-        
-        <View style={styles.priceContainer}>
-          {event.isFree || event.tickets[0]?.price === 0 ? (
-            <Text style={[styles.price, { color: colors.success }]}>Free</Text>
-          ) : (
-            <Text style={[styles.price, { color: colors.primary }]}>
-              {event.tickets[0]?.currency} {event.tickets[0]?.price}
-            </Text>
-          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -84,20 +69,24 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: 12,
     overflow: 'hidden',
-    width: '100%',
   },
   image: {
     width: '100%',
-    height: 130,
+    height: 110,
   },
-  gradient: {
+  categoryBadge: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 60,
+    top: 8,
+    left: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
   },
-  content: {
+  categoryText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  detailsContainer: {
     padding: 10,
   },
   title: {
@@ -105,38 +94,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 6,
   },
-  details: {
-    marginBottom: 4,
+  metaContainer: {
+    flexDirection: 'row',
   },
-  detailRow: {
+  metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 3,
+    marginRight: 12,
   },
-  detailText: {
-    fontSize: 12,
+  metaText: {
+    fontSize: 11,
     marginLeft: 4,
-  },
-  priceContainer: {
-    marginTop: 4,
-  },
-  price: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  dateTag: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-  },
-  dateText: {
-    color: '#000000',
-    fontSize: 10,
-    fontWeight: '600',
   },
 });
 
