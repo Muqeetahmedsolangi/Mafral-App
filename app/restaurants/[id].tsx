@@ -12,7 +12,7 @@ import {
   Linking,
   Platform
 } from 'react-native';
-import { useLocalSearchParams, Stack, router } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router'; // Remove Stack import
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '@/context/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -22,7 +22,7 @@ import RestaurantInfoSection from '@/components/restaurants/RestaurantInfoSectio
 import RestaurantHoursSection from '@/components/restaurants/RestaurantHoursSection';
 import RestaurantMenuSection from '@/components/restaurants/RestaurantMenuSection';
 import RestaurantTableSection from '@/components/restaurants/RestaurantTablesSection';
-import RestaurantImagesSection from '@/components/restaurants/RestaurantBasicInfo';
+import RestaurantImagesSection from '@/components/restaurants/RestaurantImagesSection';
 import RestaurantMapSection from '@/components/restaurants/RestaurantMapSection';
 
 const { width, height } = Dimensions.get('window');
@@ -36,6 +36,11 @@ export default function RestaurantDetailsScreen() {
   const [activeTab, setActiveTab] = useState<'info' | 'menu' | 'photos'>('info');
 
   useEffect(() => {
+    // Add this to hide the header
+    if (Platform.OS === 'web') {
+      document.title = restaurant?.name || 'Restaurant Details';
+    }
+    
     if (typeof id === 'string') {
       // In a real app, fetch from API
       const fetchedRestaurant = getRestaurantById(id);
@@ -44,7 +49,7 @@ export default function RestaurantDetailsScreen() {
         setIsFavorite(fetchedRestaurant.isFavorite || false);
       }
     }
-  }, [id]);
+  }, [id, restaurant?.name]);
   
   if (!restaurant) {
     return (
@@ -115,13 +120,11 @@ export default function RestaurantDetailsScreen() {
   return (
     <>
       <StatusBar barStyle="light-content" />
-      <Stack.Screen 
-        options={{ 
-          headerShown: false,
-        }} 
-      />
+      {/* Remove the Stack.Screen component completely */}
       
       <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* The rest of your UI stays the same */}
+        
         {/* Header Image */}
         <View style={styles.headerContainer}>
           <Image source={{ uri: restaurant.coverImage }} style={styles.headerImage} />
@@ -243,6 +246,7 @@ export default function RestaurantDetailsScreen() {
         <View style={[styles.tabContainer, { borderBottomColor: colors.border }]}>
           <TouchableOpacity 
             style={[
+
               styles.tab, 
               activeTab === 'info' && { borderBottomColor: colors.primary, borderBottomWidth: 2 }
             ]}
@@ -250,6 +254,7 @@ export default function RestaurantDetailsScreen() {
           >
             <Text 
               style={[
+
                 styles.tabText, 
                 { color: activeTab === 'info' ? colors.primary : colors.textSecondary }
               ]}
@@ -260,6 +265,7 @@ export default function RestaurantDetailsScreen() {
           
           <TouchableOpacity 
             style={[
+
               styles.tab, 
               activeTab === 'menu' && { borderBottomColor: colors.primary, borderBottomWidth: 2 }
             ]}
@@ -267,6 +273,7 @@ export default function RestaurantDetailsScreen() {
           >
             <Text 
               style={[
+
                 styles.tabText, 
                 { color: activeTab === 'menu' ? colors.primary : colors.textSecondary }
               ]}
@@ -277,6 +284,7 @@ export default function RestaurantDetailsScreen() {
           
           <TouchableOpacity 
             style={[
+
               styles.tab, 
               activeTab === 'photos' && { borderBottomColor: colors.primary, borderBottomWidth: 2 }
             ]}
@@ -284,6 +292,7 @@ export default function RestaurantDetailsScreen() {
           >
             <Text 
               style={[
+
                 styles.tabText, 
                 { color: activeTab === 'photos' ? colors.primary : colors.textSecondary }
               ]}

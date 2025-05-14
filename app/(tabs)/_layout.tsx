@@ -46,6 +46,16 @@ export default function TabsLayout() {
           ),
         }}
       />
+            <Tabs.Screen
+        name="restaurants"
+        options={{
+          title: "Restaurants",
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="anchor" size={size} color={color} />
+          ),
+        }}
+      />
 
       <Tabs.Screen
         name="explore"
@@ -78,6 +88,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+
     </Tabs>
   );
 }
